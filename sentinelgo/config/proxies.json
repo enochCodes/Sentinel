@@ -1,0 +1,16 @@
+[
+  {
+    "proxy": "http://user1:pass1@proxy1.example.com:8080",
+    "region": "US"
+  },
+  {
+    "proxy": "https://user2:pass2@proxy2.example.com:8000"
+  },
+  {
+    "proxy": "proxy3.example.com:3128"
+  },
+  {
+    "proxy": "user4:pass4@proxy4.example.com:8888",
+    "region": "EU"
+  }
+]
