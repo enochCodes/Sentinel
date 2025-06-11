@@ -228,7 +228,8 @@ func (s *Session) runLoop() {
 					s.State = Aborted
 				}
 				s.mu.Unlock()
-				if s.GetState() == Aborted { return }
+				state, _, _, _, _ := s.GetState()
+				if state == Aborted { return }
 				continue
 			case "abort":
 				s.State = Aborted
@@ -244,16 +245,9 @@ func (s *Session) runLoop() {
 
 		s.mu.Lock()
 		if s.State != Running {
-<<<<<<< HEAD
-			s.mu.Unlock() // Not running, re-iterate to check control messages or exit conditions
-			// Add a small sleep to prevent busy-looping when paused and no control messages
-			if currentState == Paused { // Use currentState captured at start of loop iteration
-				time.Sleep(100 * time.Millisecond)
-=======
 			s.mu.Unlock()
 			if currentState == Paused {
 				 time.Sleep(100 * time.Millisecond)
->>>>>>> 927b75f6d2e0f21941a847d06e7bfc04ccad4fac
 			}
 			continue
 		}
@@ -306,21 +300,7 @@ func (s *Session) Resume() error {
 
 func (s *Session) Abort() error {
 	s.mu.Lock()
-<<<<<<< HEAD
-	// Allow abort from Running or Paused states primarily
-	if s.State != Running && s.State != Paused && s.State != Stopping {
-		// If Idle, Stopped, Completed, Failed, Aborted, nothing to do or already done.
-		if s.State == Idle || s.State == Stopped || s.State == Completed || s.State == Failed || s.State == Aborted {
-			s.mu.Unlock()
-			// Ensure LogChannel is closed if it wasn't by runLoop
-			// This is tricky, as runLoop might not have started.
-			// Consider a dedicated close mechanism or rely on GC for unstarted sessions.
-			// if s.State == Idle { close(s.LogChannel) }
-			return nil
-		}
-=======
 	if s.State == Completed || s.State == Aborted || s.State == Failed || s.State == Idle {
->>>>>>> 927b75f6d2e0f21941a847d06e7bfc04ccad4fac
 		s.mu.Unlock()
 		// If Idle, runLoop hasn't started. LogChannel might be open but no sender.
 		// TUI should handle this. If Abort is called multiple times, this prevents error/panic.

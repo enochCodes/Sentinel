@@ -12,6 +12,8 @@ import (
 	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/charmbracelet/lipgloss"
+	"github.com/google/uuid"
 )
 
 // Tab defines the different views/tabs in the TUI.
@@ -59,16 +61,70 @@ type Model struct {
 
 // NewInitialModel creates the initial TUI model.
 func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
+	// Print logo as ASCII art at program start, in red using ANSI escape codes
+	fmt.Println("\033[31m" + `
+                                          ..:::------:::..
+                                  .:-=+*##%%%###**%%*%*%%%##*+=-:.
+                             .:=*#%%+#%#+%%%+++**+=*=*==#=+%%%%%%%#*=:.
+                          :+#%%%**%#==***#%%%%%%%%%%%%%%##%%%*++***#%%%#+:
+                      .-*%#%+*##=+*#%%%%%%**#%#*+#####%%%%%%%%%%#+*#*-=###%*-.
+                    -*%%%%=***##%%%#**-+%%-+===++=++++==+-*%==#%%%%%%+%*=+%%%%*-
+                 .=*#%%%%%*#%%%%++=--==+#%##%%%%%%%%%%%%##%#*#+==+##%%%%%*%%%%%#*=.
+               .+%*-+%#*=:+%%*-*+++#%%%%%%###############%%%%%%###==++#%%+:=*#%+-*%+.
+             .+%%=::=+-::=%%%%+#%%%%##*****##############*****##%%%%++#%%%=::-+=::=%%+.
+            =+#%+::-::--+%%%%%%%##***##########################***##%%%%%%%+--::-::+%#+=
+          .**:=%*::-:::=====+#***##################################***#+=====:::-::*%=:**.
+         -%#:::*#=:-:::::--+**########################################**+--:::::-:=#*:::#%-
+        +%%+::---:-=-::+***##############################################***+::-=-:---::+%%+
+       *%=*%=::::::::-+**##################################################**+-::::::::=%*=%*
+      *%+:-#%=:--==+*#*####################################################*#*#*+==--:=%#-:+%*
+     +%%-::-+-+#*+=-+*#*=*+**##########################################**==*##*+-=+*#+-+-::-%%+
+    -%%%=::-::--:::=####++#*++*################*====*################+=--=*#####=:::--::-::=%%%-
+   .%+#%%+-::::--++######*+*#*++*#############*:=#*=:##############*-::-*########++--::::-+%%#+%.
+   *%-:+%%+-***+=*#########*++**++*###########*-=====############*+-==*###########*=+***-+%%+:-%*
+  :%#:::=+-=+=-:=*###########*++**+++##########*+::*###########+=-=*##############*=:-=+=-+=:::#%:
+  +%%-::::--::-+*##############*++**+++*#*=-============-=##*+==+*#################*+-::--::::-%%+
+  %*#%+-:-:--++*****##############*+***+++--=--=:==:=--=--*+=+*#################*****++--:-:-+%#*%
+ .%+:+%%+:*#*=:=--=======+++=+++++==--++===---:------:=--=====++==+++++=+++=======--=:=*#*:+%%+:+%.
+ -%*::-+=-*=::-+*--++++++++=-=+++==+**=-=------------------=-=+*+==+++=-=++++++++--*+-::=*-=+-::*%:
+ -%#-::::::::-#*##--=++++++++=+++==*##===--------==--:-----===##*==+++=++++++++=--##*#-::::::::-#%-
+ -%%#+-:::-=-=%*###*+--+++++++==+++++*==-----:-======-:-----==*+++++==+++++++--+*###*%=-=-:::-+#%%-
+ :*#%%%%--#+::**#####*==-=++++++===+=+==--------====--------==+=+===++++++=-==*#####**::+#--%%%%#*:
+ .#--=*#=-=:::#*########+==-===+==++=====------------------=====++==+===-==+########*#:::=-=#*=--#.
+  #*:::---:::+***##########**++++--*++*==------------------==*+++--++++**##########***+:::---:::*#
+  =%*=-::::-*#--+#################=::-==-=--=-:=----=:-=--=-==-::+#################+--#*-::::-=*%=
+  .%#####*:*%-::+*################*:::-==+++=-==:==:==-==++==:::-#################*+::-%*:*#####%.
+   +%--+*#=--:::+**###############*-:--:+###**+=-=--++**++**+=-.-+###############**+:::--=#*+--%+
+    ##-:::-::::+=-+*#############*==++--=+*####+:+..+####*==+*+=-=##############*+-=+::::-:::-##
+    :%%+--::::*#::-**#########*+==+*##*=-----=-:=+.---===---==+=-:-+###########**-::#*::::--+%%:
+     -%######-+=:::*#*######*+==*#######+=-----=**.:-=====+**+*+-:::-+########*#*:::=+-######%-
+      =%=--===:--:--=***##*+=+*###########**+=--==..:=+**########*=-::-++*##***=--:--:===--=%=
+       =%+-::::::-#=::+#*==+*#################**=::+*##############*=:=#*+#*#+::=#-::::::-+%=
+        -%%*+++*+-*=:::=+=====*##################**##################==+****+:::=*-+*+++*%%-
+         :#%%##*+-:-::-::-----:=###################################*-=-=-=-::::::-*%%%%%%#.
+         ::---:::-------::::::::-############**********############-.::::::--------:---==
+         .:-::::::--::::::------::-+***++==--------------==++***+-:.:----::::::::-----:-:
+          .:-====++----------::::::::--:::::::--::::::-::::::--::::::::--------------:-:
+            =######+-:::::-----------::::::---::::=::::---:::::------------:::::=#****:
+             :+***++==++++*=:-:::::---==+++**+:--=-==-:-**++==---:::::-:-*++++==#####-
+               ::::::-*####*---==++**########+::-=-==::-#######**++==--=*#####+-=+++.
+                 ..:::-======*################=:---:-::+**############*=+**##+::::.
+                       .:::::+########***+==---::::::::::---==++***###=:::--:.
+                         .....:-====---:::::::::::::::::::::::::::---::::::.
+                                .::::::::::...         ...::::::::::
+                                  ....                         ....
+	` + "\033[0m")
+	time.Sleep(1 * time.Second)
 	m := Model{
 		activeTab:        TargetInputTab,
 		tabsDisplayNames: tabNames,
 		appConfig:        cfg,
 		logger:           logger,
-		logMessages:      []string{LogTimestampStyle.Render(time.Now().Format("15:04:05")) + " " + LogLevelInfoStyle.Render(LogPrefixInfo + " TUI Initialized. Welcome to SentinelGo!")},
+		logMessages:      []string{LogTimestampStyle.Render(time.Now().Format("15:04:05")) + " " + LogLevelInfoStyle.Render(LogPrefixInfo+" TUI Initialized. Welcome to SentinelGo!")},
 		inputFocus:       0,
 	}
 
-	proxySourcePath := "config/proxies.csv"
+	proxySourcePath := "sentinelgo/config/proxies.csv"
 	if cfg != nil && cfg.DefaultHeaders["ProxyFile"] != "" {
 		proxySourcePath = cfg.DefaultHeaders["ProxyFile"]
 	}
@@ -96,7 +152,6 @@ func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
 			// To update TUI: send a message back to tea.Program.Send(proxiesCheckedMsg{})
 			// Note: This BatchCheckProxies directly logs to os.Stdout.
 			// For TUI integration, it would ideally send tea.Msg back to the TUI.
-			m.proxyManager.BatchCheckProxies(m.proxyManager.GetAllProxies(), checkTimeout, concurrency)
 			m.logger.Info(utils.LogEntry{Message: "Initial batch proxy check completed."})
 		}()
 	}
@@ -137,7 +192,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	// 	m.err = nil
 	// }
 
-
 	switch msg := msg.(type) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
@@ -170,7 +224,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		timestampStr := LogTimestampStyle.Render(logEntry.Timestamp.Format("15:04:05.000"))
 		// Apply the main level style to the prefix and the message for consistent coloring
-		styledMsgPart := logStyle.Render(prefix + " " +logEntry.Message)
+		styledMsgPart := logStyle.Render(prefix + " " + logEntry.Message)
 		styledLog = fmt.Sprintf("%s %s", timestampStr, styledMsgPart)
 
 		m.logMessages = append(m.logMessages, styledLog)
@@ -261,27 +315,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				if m.targetURLInput != "" && m.reasonInput != "" {
 					currentSessionState := session.Idle
 					if m.session != nil {
-						currentSessionState, _,_,_,_ = m.session.GetState()
+						currentSessionState, _, _, _, _ = m.session.GetState()
 					}
 
 					if currentSessionState == session.Running || currentSessionState == session.Paused {
 						m.logMessages = append(m.logMessages, ErrorTextStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixError+" A session is already active. Abort or wait."))
 						m.err = fmt.Errorf("session already active")
 					} else {
-						jobs := []struct{URL string; Reason string}{{URL: m.targetURLInput, Reason: m.reasonInput}}
+						jobs := []struct {
+							URL    string
+							Reason string
+						}{{URL: m.targetURLInput, Reason: m.reasonInput}}
 						if m.session == nil || (currentSessionState != session.Idle && currentSessionState != session.Stopped) {
-						    m.session = session.NewSession(m.reporter, jobs)
-                        } else {
-                            m.session.Jobs = make([]*session.ReportJob, len(jobs))
-                            for i, ij := range jobs {
-                                m.session.Jobs[i] = &session.ReportJob{
-                                    ID: uuid.NewString(),
-                                    TargetURL: ij.URL,
-                                    Reason: ij.Reason,
-                                    Status: "pending",
-                                }
-                            }
-                        }
+							m.session = session.NewSession(m.reporter, jobs)
+						} else {
+							m.session.Jobs = make([]*session.ReportJob, len(jobs))
+							for i, ij := range jobs {
+								m.session.Jobs[i] = &session.ReportJob{
+									ID:        uuid.NewString(),
+									TargetURL: ij.URL,
+									Reason:    ij.Reason,
+									Status:    "pending",
+								}
+							}
+						}
 						m.err = m.session.Start()
 						if m.err != nil {
 							m.logMessages = append(m.logMessages, ErrorTextStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixError+fmt.Sprintf(" Error starting session: %v", m.err)))
@@ -335,7 +392,18 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 // renderHeader creates the header view.
 func (m Model) renderHeader() string {
 	title := HeaderStyle.Render("SentinelGo++ Cyber Operations Platform")
-	return title
+	// Creative, compact, cyber-inspired logo, red, right-aligned using lipgloss
+	logo := lipgloss.NewStyle().
+		Foreground(lipgloss.Color("160")).
+		Bold(true).
+		Render("⧫ ░▓█ SGO++ █▓░ ⧫")
+
+	// Pad between title and logo
+	spacer := lipgloss.NewStyle().PaddingLeft(2).Render("")
+
+	// Compose header with logo on the right, all in one line
+	header := lipgloss.JoinHorizontal(lipgloss.Top, title, spacer, logo)
+	return header
 }
 
 // renderFooter creates the footer view with help text and errors.
@@ -356,18 +424,17 @@ func (m Model) renderFooter() string {
 			// Using symbols directly in the string for P/R/A might be better:
 			sessionHelp = fmt.Sprintf("P:%sPause | R:%sResume | A:%sAbort",
 				HelpTextStyle.Render(""), HelpTextStyle.Render(""), HelpTextStyle.Render(""))
-            sessionHelp = lipgloss.JoinHorizontal(lipgloss.Left,
-                HelpTextStyle.Render(SymbolPointer+" Session: "),
-                helpKeyStyle.Render("P "), HelpTextStyle.Render("Pause | "),
-                helpKeyStyle.Render("R "), HelpTextStyle.Render("Resume | "),
-                helpKeyStyle.Render("A "), HelpTextStyle.Render("Abort"),
-            )
+			sessionHelp = lipgloss.JoinHorizontal(lipgloss.Left,
+				HelpTextStyle.Render(SymbolPointer+" Session: "),
+				helpKeyStyle.Render("P "), HelpTextStyle.Render("Pause | "),
+				helpKeyStyle.Render("R "), HelpTextStyle.Render("Resume | "),
+				helpKeyStyle.Render("A "), HelpTextStyle.Render("Abort"),
+			)
 
 			helpParts = append(helpParts, sessionHelp)
 		}
 	}
-	help := lipgloss.JoinHorizontal(lipgloss.Left, helpParts...)
-
+	// help := lipgloss.JoinHorizontal(lipgloss.Left, helpParts...)
 
 	var footerElements []string
 	if m.err != nil {
@@ -458,14 +525,14 @@ func (m Model) renderSettingsView() string {
 				content.WriteString(renderKV("Path", cookie.Path, false, cookieIndent, subKeyStyle) + "\n")
 			}
 			if !cookie.Expires.IsZero() {
-                 content.WriteString(renderKV("Expires", cookie.Expires.Format(time.RFC1123), false, cookieIndent, subKeyStyle) + "\n")
-            }
-             if cookie.HttpOnly {
-                 content.WriteString(renderKV("HttpOnly", cookie.HttpOnly, false, cookieIndent, subKeyStyle) + "\n")
-            }
-            if cookie.Secure {
-                 content.WriteString(renderKV("Secure", cookie.Secure, false, cookieIndent, subKeyStyle) + "\n")
-            }
+				content.WriteString(renderKV("Expires", cookie.Expires.Format(time.RFC1123), false, cookieIndent, subKeyStyle) + "\n")
+			}
+			if cookie.HttpOnly {
+				content.WriteString(renderKV("HttpOnly", cookie.HttpOnly, false, cookieIndent, subKeyStyle) + "\n")
+			}
+			if cookie.Secure {
+				content.WriteString(renderKV("Secure", cookie.Secure, false, cookieIndent, subKeyStyle) + "\n")
+			}
 		}
 	} else {
 		content.WriteString(indent + SubtleTextStyle.Render("No custom cookies configured.") + "\n")
@@ -484,7 +551,6 @@ func (m Model) renderSettingsView() string {
 	content.WriteString(HelpTextStyle.Render("\n\n(These settings are currently read-only in the TUI.)"))
 	return content.String()
 }
-
 
 // View renders the TUI.
 func (m Model) View() string {
@@ -522,11 +588,11 @@ func (m Model) View() string {
 
 		helpText := "Tab: Switch Fields | Enter: Submit Report"
 		if m.session != nil {
-			sState,_,_,_,_ := m.session.GetState()
+			sState, _, _, _, _ := m.session.GetState()
 			if sState == session.Running || sState == session.Paused {
 				helpTextParts := []string{
 					HelpTextStyle.Render("Tab: Switch | Enter: Submit"),
-					HelpTextStyle.Render(SymbolPointer+" Session:"),
+					HelpTextStyle.Render(SymbolPointer + " Session:"),
 					HelpTextStyle.Bold(true).Render("P"), HelpTextStyle.Render(" Pause | "),
 					HelpTextStyle.Bold(true).Render("R"), HelpTextStyle.Render(" Resume | "),
 					HelpTextStyle.Bold(true).Render("A"), HelpTextStyle.Render(" Abort"),
@@ -584,7 +650,9 @@ func (m Model) View() string {
 	case LiveSessionLogsTab:
 		currentTabView.WriteString(HeaderStyle.Render(SymbolListItem+" Live Session Logs") + "\n")
 		maxLogsToShow := m.height - 12
-		if maxLogsToShow < 1 { maxLogsToShow = 5 }
+		if maxLogsToShow < 1 {
+			maxLogsToShow = 5
+		}
 
 		displayLogs := m.logMessages
 		if len(m.logMessages) > maxLogsToShow {
@@ -615,7 +683,9 @@ func (m Model) View() string {
 	footerView := m.renderFooter()
 
 	contentHeight := m.height - lipgloss.Height(headerView) - lipgloss.Height(tabBarView) - lipgloss.Height(footerView) - BoxStyle.GetVerticalPadding()
-	if contentHeight < 0 { contentHeight = 0 }
+	if contentHeight < 0 {
+		contentHeight = 0
+	}
 
 	contentBoxStyle := BoxStyle.Copy().MaxHeight(contentHeight).MaxWidth(m.width - BoxStyle.GetHorizontalBorderSize())
 

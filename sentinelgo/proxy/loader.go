@@ -47,10 +47,9 @@ func parseProxyString(proxyStr string, defaultScheme string) (*url.URL, error) {
 			parsedURL.User = url.UserPassword(username, password)
 			parsedURL.Host = hostStr
 		} else {
-            return nil, fmt.Errorf("malformed user info in proxy string: %s", proxyStr)
-        }
+			return nil, fmt.Errorf("malformed user info in proxy string: %s", proxyStr)
+		}
 	}
-
 
 	return parsedURL, nil
 }
@@ -116,50 +115,80 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 		}
 
 		for i, line := range lines {
-			if i == 0 && (strings.ToLower(line[0]) == "ip" || strings.ToLower(line[0]) == "host") { // Skip header
+			if len(line) == 0 || (len(line) == 1 && strings.TrimSpace(line[0]) == "") {
 				continue
 			}
-			if len(line) < 1 { // Skip empty lines
+			// Skip header if present
+			if i == 0 && (strings.ToLower(line[0]) == "ip" || strings.ToLower(line[0]) == "host") {
 				continue
 			}
 
-			var proxyStr, region string
+			// Try to flexibly extract proxy info from any column arrangement
+			var ip, port, user, pass, proto, region string
+			// Find IP (first field that looks like an IP)
+			for idx, field := range line {
+				if netIP := strings.Count(field, "."); netIP == 3 {
+					ip = field
+					// Try to get port (next field that is all digits)
+					if idx+1 < len(line) && isAllDigits(line[idx+1]) {
+						port = line[idx+1]
+					}
+					// Try to get protocol (look for socks4/socks5/http/https)
+					for _, f := range line {
+						lower := strings.ToLower(f)
+						if lower == "socks4" || lower == "socks5" || lower == "http" || lower == "https" {
+							proto = lower
+							break
+						}
+					}
+					// Try to get user/pass (look for fields before/after IP/port)
+					if idx >= 2 {
+						user = line[idx-2]
+						pass = line[idx-1]
+					}
+					// Try to get region (last field or a field after port)
+					if len(line) > idx+2 {
+						region = line[idx+2]
+					} else if len(line) > idx+1 {
+						region = line[len(line)-1]
+					}
+					break
+				}
+			}
 
-			// Handle format ip,port,user,pass or ip:port:user:pass
-			if len(line) == 1 && strings.Contains(line[0], ":") { // ip:port:user:pass format
+			// Fallback: try to parse as ip:port:user:pass or similar
+			if ip == "" && len(line) == 1 && strings.Contains(line[0], ":") {
 				parts := strings.Split(line[0], ":")
-				if len(parts) < 2 {
-					fmt.Printf("Skipping malformed CSV line (format ip:port:user:pass) #%d in %s: %v\n", i+1, sourcePathOrURL, line)
-					continue
-				}
-				ipPort := strings.Join(parts[0:2], ":")
-				if len(parts) >= 4 { // user:pass present
-                    userInfo := strings.Join(parts[2:4], ":")
-                    proxyStr = fmt.Sprintf("http://%s@%s", userInfo, ipPort)
+				if len(parts) >= 2 {
+					ip = parts[0]
+					port = parts[1]
+					if len(parts) >= 4 {
+						user = parts[2]
+						pass = parts[3]
+					}
 					if len(parts) >= 5 {
-						region = parts[4]
+						proto = parts[4]
 					}
-                } else { // No user:pass
-                    proxyStr = fmt.Sprintf("http://%s", ipPort)
-					if len(parts) >= 3 {
-						region = parts[2] // if region is 3rd element after ip:port
+					if len(parts) >= 6 {
+						region = parts[5]
 					}
-                }
+				}
+			}
 
-			} else if len(line) >= 4 { // ip,port,user,pass format
-				ip, port, user, pass := line[0], line[1], line[2], line[3]
-				proxyStr = fmt.Sprintf("http://%s:%s@%s:%s", user, pass, ip, port)
-				if len(line) >= 5 {
-					region = line[4]
+			// Compose proxy string
+			var proxyStr string
+			if ip != "" && port != "" {
+				if user != "" && pass != "" {
+					proxyStr = fmt.Sprintf("http://%s:%s@%s:%s", user, pass, ip, port)
+				} else {
+					proxyStr = fmt.Sprintf("http://%s:%s", ip, port)
 				}
-			} else if len(line) >= 2 { // ip,port format (no auth)
-				ip, port := line[0], line[1]
-				proxyStr = fmt.Sprintf("http://%s:%s", ip, port)
-				if len(line) >=3 {
-					region = line[2]
-				}
+			} else if ip != "" && port == "" && proto != "" {
+				// Try protocol as port (for socks4/5, etc)
+				proxyStr = fmt.Sprintf("%s://%s", proto, ip)
 			} else {
-				fmt.Printf("Skipping malformed CSV line #%d in %s: %v\n", i+1, sourcePathOrURL, line)
+				// Could not determine proxy format
+				fmt.Printf("Skipping unrecognized proxy format in CSV line #%d in %s: %v\n", i+1, sourcePathOrURL, line)
 				continue
 			}
 
@@ -182,4 +211,14 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 	}
 
 	return proxies, nil
+}
+
+// isAllDigits checks if a string consists only of digits.
+func isAllDigits(s string) bool {
+	for _, r := range s {
+		if r < '0' || r > '9' {
+			return false
+		}
+	}
+	return len(s) > 0
 }

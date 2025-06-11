@@ -76,8 +76,9 @@ func BatchCheckProxies(proxies []*ProxyInfo, checkTimeout time.Duration, concurr
 
 			err := CheckProxyHealth(proxyToCheck, checkTimeout, healthCheckURL...)
 			if err != nil {
-				// Optionally log the error, e.g., log.Printf("Health check for %s failed: %v", proxyToCheck.OriginalString, err)
-				fmt.Printf("Health check for %s (%s) - Status: %s, Error: %v\n", proxyToCheck.OriginalString, proxyToCheck.URL, proxyToCheck.HealthStatus, err)
+				// Suppress error logs for proxy health check failures in CLI window.
+				// Optionally, log to file or metrics here if needed.
+				// fmt.Printf("Health check for %s (%s) - Status: %s, Error: %v\n", proxyToCheck.OriginalString, proxyToCheck.URL, proxyToCheck.HealthStatus, err)
 			} else {
 				fmt.Printf("Health check for %s (%s) - Status: %s, Latency: %v\n", proxyToCheck.OriginalString, proxyToCheck.URL, proxyToCheck.HealthStatus, proxyToCheck.Latency)
 			}

@@ -113,6 +113,11 @@ var (
 	HelpTextStyle = lipgloss.NewStyle().
 		Foreground(SubtleGreyText).
 		PaddingTop(1)
+
+	// ErrorMessageStyle for error messages in the footer or elsewhere.
+	ErrorMessageStyle = lipgloss.NewStyle().
+		Foreground(ErrorColor).
+		Bold(true)
 )
 
 // Tab Styles

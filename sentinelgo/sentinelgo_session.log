@@ -1,1 +1,50 @@
 {"timestamp":"2025-06-11T04:43:32.673911064Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:10:06.693402914Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:10:19.599675844Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:11:10.76570562Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:13:09.244506697Z","level":"ERROR","message":"Failed to get proxy for report attempt","session_id":"cd411324-4fe0-42e1-9403-9074e2a49662","report_url":"https://www.tiktok.com/aweme/v2/aweme/feedback/?WebIdLastTime=1749203347\u0026aid=1988\u0026app_language=en\u0026app_name=tiktok_web\u0026browser_language=en-US\u0026browser_name=Mozilla\u0026browser_online=true\u0026browser_platform=Linux%20x86_64\u0026browser_version=5.0%20%28iPhone%3B%20CPU%20iPhone%20OS%2016_6%20like%20Mac%20OS%20X%29%20AppleWebKit%2F605.1.15%20%28KHTML%2C%20like%20Gecko%29%20Version%2F16.6%20Mobile%2F15E148%20Safari%2F604.1\u0026channel=tiktok_web\u0026cookie_enabled=true\u0026current_region=ET\u0026data_collection_enabled=true\u0026device_id=7512771138952709637\u0026device_platform=web_mobile\u0026focus_state=true\u0026from_page=user\u0026history_len=4\u0026is_fullscreen=false\u0026is_page_visible=true\u0026lang=en\u0026nickname=Mathy%20photo%20%26%20velo\u0026object_id=6895259411321897990\u0026odinId=7512771066734347320\u0026os=ios\u0026owner_id=6895259411321897990\u0026priority_region=\u0026reason=9004\u0026referer=\u0026region=ET\u0026report_type=user\u0026screen_height=900\u0026screen_width=1440\u0026secUid=MS4wLjABAAAA3oLpFx0BUQvuPnbeZNxHqNpudprHbgoZgrBn7L2bjaVfDeHpFH6N4HvTIhgzcFU_\u0026target=6895259411321897990\u0026tz_name=Africa%2FAddis_Ababa\u0026user_is_login=false\u0026verifyFp=verify_mbpkghwz_BudCxjsz_yyIe_45u9_81zW_uGzkRefiddA7\u0026webcast_language=en\u0026msToken=mSnRD1d0YPOMtQdYJARPD45yzbgWZS0FqYG-6oSU-04KCas14lprHlgE_IBcK3MTkDgL1Cy0L6FQNa3Po6OwnDWAFVLCuYclATaZFbpv-GdbaV6NlQo_IPUsi2Dm3Gk4bbi_CQ8tTrC-ozk=\u0026X-Bogus=DFSzKwJLN0UANGc4CeJ15fwgAd3N\u0026X-Gnarly=MH-NSQE-NnQ1TK6Fwl9BW6HIe7gDWFjXUqzZqk-9aAKrmFgWXtRY4xVK5Go-a-9op4SZ6neZ1QccJFaPWKRvei0eDzrhy6bO-/Cl5m7eSyGZ7aNyH9gd5wFMg2b1/ETGjqz4vzavfoeaeLfutyna5ixuKNq95465L99oypk3YT-5Rbqcex/M88omfh03nvE2qLbkcblvwjCATWyEIJd94u6YaCKMTpMsvSSgnYhSysAy2ZIv2Yzko0P16xKM17Sd-KzjNV4K8V-W","outcome":"failed_prereq","error":"no proxies available in the manager"}
+{"timestamp":"2025-06-11T08:15:52.728264166Z","level":"ERROR","message":"Failed to get proxy for report attempt","session_id":"0ade1f16-0fc6-4dd8-9192-15eed2eee2a7","report_url":"https://www.tiktok.com/aweme/v2/aweme/feedback/?WebIdLastTime=1749203347\u0026aid=1988\u0026app_language=en\u0026app_name=tiktok_web\u0026browser_language=en-US\u0026browser_name=Mozilla\u0026browser_online=true\u0026browser_platform=Linux%20x86_64\u0026browser_version=5.0%20%28iPhone%3B%20CPU%20iPhone%20OS%2016_6%20like%20Mac%20OS%20X%29%20AppleWebKit%2F605.1.15%20%28KHTML%2C%20like%20Gecko%29%20Version%2F16.6%20Mobile%2F15E148%20Safari%2F604.1\u0026channel=tiktok_web\u0026cookie_enabled=true\u0026current_region=ET\u0026data_collection_enabled=true\u0026device_id=7512771138952709637\u0026device_platform=web_mobile\u0026focus_state=true\u0026from_page=user\u0026history_len=4\u0026is_fullscreen=false\u0026is_page_visible=true\u0026lang=en\u0026nickname=Mathy%20photo%20%26%20velo\u0026object_id=6895259411321897990\u0026odinId=7512771066734347320\u0026os=ios\u0026owner_id=6895259411321897990\u0026priority_region=\u0026reason=9004\u0026referer=\u0026region=ET\u0026report_type=user\u0026screen_height=900\u0026screen_width=1440\u0026secUid=MS4wLjABAAAA3oLpFx0BUQvuPnbeZNxHqNpudprHbgoZgrBn7L2bjaVfDeHpFH6N4HvTIhgzcFU_\u0026target=6895259411321897990\u0026tz_name=Africa%2FAddis_Ababa\u0026user_is_login=false\u0026verifyFp=verify_mbpkghwz_BudCxjsz_yyIe_45u9_81zW_uGzkRefiddA7\u0026webcast_language=en\u0026msToken=mSnRD1d0YPOMtQdYJARPD45yzbgWZS0FqYG-6oSU-04KCas14lprHlgE_IBcK3MTkDgL1Cy0L6FQNa3Po6OwnDWAFVLCuYclATaZFbpv-GdbaV6NlQo_IPUsi2Dm3Gk4bbi_CQ8tTrC-ozk=\u0026X-Bogus=DFSzKwJLN0UANGc4CeJ15fwgAd3N\u0026X-Gnarly=MH-NSQE-NnQ1TK6Fwl9BW6HIe7gDWFjXUqzZqk-9aAKrmFgWXtRY4xVK5Go-a-9op4SZ6neZ1QccJFaPWKRvei0eDzrhy6bO-/Cl5m7eSyGZ7aNyH9gd5wFMg2b1/ETGjqz4vzavfoeaeLfutyna5ixuKNq95465L99oypk3YT-5Rbqcex/M88omfh03nvE2qLbkcblvwjCATWyEIJd94u6YaCKMTpMsvSSgnYhSysAy2ZIv2Yzko0P16xKM17Sd-KzjNV4K8V-W","outcome":"failed_prereq","error":"no proxies available in the manager"}
+{"timestamp":"2025-06-11T08:16:45.473100665Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:21:46.506639981Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:21:55.387703901Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:22:56.954657805Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:23:14.949401415Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:24:37.175718144Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:24:45.210186427Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:27:36.870231053Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:28:42.622638086Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:28:49.515911436Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:29:37.045374414Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:29:40.068571071Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:31:32.125136779Z","level":"INFO","message":"Initial batch proxy check completed."}
+{"timestamp":"2025-06-11T08:31:54.263588627Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:31:57.305850611Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:32:50.923316696Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:32:53.16441629Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:34:45.577151789Z","level":"INFO","message":"Initial batch proxy check completed."}
+{"timestamp":"2025-06-11T08:35:15.086142542Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:35:16.158730087Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:36:10.339707069Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:36:11.265603645Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:36:35.683257052Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:36:37.521181447Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:36:43.375465711Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:37:18.972521099Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:37:24.799502488Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:38:11.55348049Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:39:45.013817211Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:43:00.124324483Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:43:04.13445159Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:43:30.113398607Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:43:56.523280488Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:43:58.989074435Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:44:05.663276399Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:44:38.27467076Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:44:42.905448175Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:47:36.386669466Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:47:48.821157245Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:47:50.818492127Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:49:44.722512011Z","level":"INFO","message":"Initial batch proxy check completed."}
+{"timestamp":"2025-06-11T08:50:02.279138796Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
+{"timestamp":"2025-06-11T08:50:05.665077883Z","level":"INFO","message":"sentinelgo/sentinelgo application starting..."}
+{"timestamp":"2025-06-11T08:50:22.114767985Z","level":"INFO","message":"sentinelgo/sentinelgo application exited cleanly."}
