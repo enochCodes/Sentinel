@@ -2,10 +2,10 @@ package ai
 
 import (
 	"fmt"
-	"strings"
 	"math/rand" // For dummy analyzer randomness
+	"strings"
 
-	"sentinelgo/utils"
+	"sentinelgo/sentinelgo/utils"
 )
 
 // AnalysisResult holds the outcome of content analysis.
@@ -35,8 +35,8 @@ func NewDummyAnalyzer(logger *utils.Logger) *DummyAnalyzer {
 func (da *DummyAnalyzer) Analyze(sessionID string, postID string, contentText string) (*AnalysisResult, error) {
 	if da.Logger != nil {
 		da.Logger.Info(utils.LogEntry{
-			SessionID: sessionID,
-			Message:   fmt.Sprintf("Performing dummy AI analysis for post ID: %s", postID),
+			SessionID:      sessionID,
+			Message:        fmt.Sprintf("Performing dummy AI analysis for post ID: %s", postID),
 			AdditionalData: map[string]interface{}{"content_snippet": firstNChars(contentText, 50)},
 		})
 	}
@@ -67,7 +67,9 @@ func (da *DummyAnalyzer) Analyze(sessionID string, postID string, contentText st
 		result.Category = "Low Impact / Benign"
 	}
 
-	if result.ThreatScore > 100.0 { result.ThreatScore = 100.0 }
+	if result.ThreatScore > 100.0 {
+		result.ThreatScore = 100.0
+	}
 
 	if da.Logger != nil {
 		da.Logger.Info(utils.LogEntry{

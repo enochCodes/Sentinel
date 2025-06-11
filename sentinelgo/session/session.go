@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
 	"github.com/google/uuid" // For session ID
 
-	"sentinelgo/report"
+	"sentinelgo/sentinelgo/report"
 	// "sentinelgo/utils" // utils.LogEntry might be too verbose for LogChannel, using string for now
 )
 
@@ -17,8 +18,8 @@ const (
 	Idle SessionState = iota
 	Running
 	Paused
-	Stopping // Actively trying to stop workers
-	Stopped  // Workers have confirmed stop. Can be resumed.
+	Stopping  // Actively trying to stop workers
+	Stopped   // Workers have confirmed stop. Can be resumed.
 	Completed // All jobs processed.
 	Aborted   // User initiated stop, not all jobs processed.
 	Failed    // Session encountered a critical internal error (e.g., bad config)
@@ -50,15 +51,15 @@ func (s SessionState) String() string {
 
 // ReportJob defines a single reporting task.
 type ReportJob struct {
-	ID          string // Unique ID for this job
-	TargetURL   string
-	Reason      string
-	Status      string    // e.g., "pending", "processing", "success", "failed"
-	LogID       string    // From report response, if any
-	Error       string    // Error string from the reporting attempt
-	StartTime   time.Time
-	EndTime     time.Time
-	Attempts    int
+	ID        string // Unique ID for this job
+	TargetURL string
+	Reason    string
+	Status    string // e.g., "pending", "processing", "success", "failed"
+	LogID     string // From report response, if any
+	Error     string // Error string from the reporting attempt
+	StartTime time.Time
+	EndTime   time.Time
+	Attempts  int
 }
 
 // Session manages a collection of report jobs and their execution.
@@ -75,22 +76,25 @@ type Session struct {
 	EndTime           time.Time
 	ProxiesUsed       map[string]int
 
-	LogChannel        chan string
-	controlChannel    chan string
+	LogChannel     chan string
+	controlChannel chan string
 
-	wg                sync.WaitGroup
-	mu                sync.Mutex
+	wg sync.WaitGroup
+	mu sync.Mutex
 }
 
 // NewSession creates a new reporting session.
-func NewSession(reporter *report.Reporter, initialJobsData []struct{URL string; Reason string}) *Session {
+func NewSession(reporter *report.Reporter, initialJobsData []struct {
+	URL    string
+	Reason string
+}) *Session {
 	jobs := make([]*ReportJob, len(initialJobsData))
 	for i, ij := range initialJobsData {
 		jobs[i] = &ReportJob{
-			ID: uuid.NewString(),
+			ID:        uuid.NewString(),
 			TargetURL: ij.URL,
-			Reason: ij.Reason,
-			Status: "pending",
+			Reason:    ij.Reason,
+			Status:    "pending",
 		}
 	}
 
@@ -233,7 +237,7 @@ func (s *Session) runLoop() {
 			s.mu.Unlock() // Not running, re-iterate to check control messages or exit conditions
 			// Add a small sleep to prevent busy-looping when paused and no control messages
 			if currentState == Paused { // Use currentState captured at start of loop iteration
-				 time.Sleep(100 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 			continue
 		}
@@ -294,7 +298,6 @@ func (s *Session) Resume() error {
 // Abort sends a command to stop the session permanently and waits for completion.
 func (s *Session) Abort() error {
 	s.mu.Lock()
-	originalState := s.State
 	// Allow abort from Running or Paused states primarily
 	if s.State != Running && s.State != Paused && s.State != Stopping {
 		// If Idle, Stopped, Completed, Failed, Aborted, nothing to do or already done.
@@ -348,7 +351,6 @@ func (s *Session) Abort() error {
 	// close(s.LogChannel) // This could panic if runLoop tries to send after this.
 	return nil
 }
-
 
 // GetSummary provides a string summary of the session.
 func (s *Session) GetSummary() string {

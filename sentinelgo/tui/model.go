@@ -2,24 +2,16 @@ package tui
 
 import (
 	"fmt"
+	"sentinelgo/sentinelgo/ai" // Import AI package
+	"sentinelgo/sentinelgo/config"
+	"sentinelgo/sentinelgo/proxy"   // Import proxy package
+	"sentinelgo/sentinelgo/report"  // Import report package
+	"sentinelgo/sentinelgo/session" // Import session package
+	"sentinelgo/sentinelgo/utils"
 	"strings"
+	"time"
 
-	"fmt"
-	"strings"
-	"time" // For BatchCheckProxies delay example
-
-	"fmt"
-	"strings"
-	"time" // For BatchCheckProxies delay example
-
-	"sentinelgo/ai" // Import AI package
-	"sentinelgo/config"
-	"sentinelgo/proxy"   // Import proxy package
-	"sentinelgo/report"  // Import report package
-	"sentinelgo/session" // Import session package
-	"sentinelgo/utils"
-
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Tab defines the different views/tabs in the TUI.
@@ -72,13 +64,13 @@ func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
 		activeTab:   TargetInputTab,
 		appConfig:   cfg,
 		logger:      logger,
-		logMessages: []string{"TUI Initialized. Welcome to SentinelGo!"},
+		logMessages: []string{"TUI Initialized. Welcome to sentinelgo/sentinelgo!"},
 		inputFocus:  0, // Default focus to URL input
 	}
 
 	// Initialize Proxy Manager
 	// TODO: Make proxy source path configurable (e.g., from appConfig or default)
-	proxySourcePath := "config/proxies.csv" // Or proxies.json
+	proxySourcePath := "config/proxies.csv"    // Or proxies.json
 	if cfg.DefaultHeaders["ProxyFile"] != "" { // Example: allow setting via config
 		proxySourcePath = cfg.DefaultHeaders["ProxyFile"]
 	}
@@ -107,7 +99,7 @@ func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
 			// Use a less aggressive default for initial check if many proxies
 			checkTimeout := 10 * time.Second
 			concurrency := 5
-			m.proxyManager.BatchCheckProxies(m.proxyManager.GetAllProxies(), checkTimeout, concurrency)
+			proxy.BatchCheckProxies(m.proxyManager.GetAllProxies(), checkTimeout, concurrency)
 			// This logging won't go to TUI's m.logMessages directly without a tea.Cmd/tea.Msg mechanism
 			// It will go to the file logger used by BatchCheckProxies' fmt.Printf.
 			// To update TUI: send a message back to tea.Program.Send(proxiesCheckedMsg{})
@@ -116,9 +108,8 @@ func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
 		}()
 	}
 
-
 	// Initialize Reporter
-	dummyAnalyzer := ai.NewDummyAnalyzer(logger) // Create DummyAnalyzer instance
+	dummyAnalyzer := ai.NewDummyAnalyzer(logger)                                // Create DummyAnalyzer instance
 	m.reporter = report.NewReporter(cfg, m.proxyManager, logger, dummyAnalyzer) // Pass analyzer to Reporter
 	m.logMessages = append(m.logMessages, "Reporter initialized with Dummy AI Analyzer.")
 
@@ -162,13 +153,12 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// However, runLoop might send a few more messages before channel truly closes.
 			// For robustness, listen until channel is confirmed closed by listenForSessionLogsCmd returning specific msg or nil.
 			if string(msg) == "Session log channel closed." || m.session.GetState() == session.Completed || m.session.GetState() == session.Aborted || m.session.GetState() == session.Failed {
-                 m.sessionStatus = fmt.Sprintf("Session: %s", m.session.GetState().String())
+				m.sessionStatus = fmt.Sprintf("Session: %s", m.session.GetState().String())
 				return m, nil // Stop listening
 			}
 		}
-        // Keep listening if session is active or messages are still coming
+		// Keep listening if session is active or messages are still coming
 		cmds = append(cmds, m.listenForSessionLogsCmd())
-
 
 	case tea.KeyMsg:
 		// Global keybindings (like Ctrl+C, q for quit, tab navigation)
@@ -214,13 +204,13 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.logMessages = append(m.logMessages, "Session active. Press 'a' to abort session first, or Ctrl+C again to force quit.")
 				// Optionally, implement a more robust confirmation or force quit mechanism.
 				// For now, this makes 'q' and 'ctrl+c' less destructive if session is active.
-                // Returning m, tea.Quit here would be the old behavior.
-                // To implement "Ctrl+C again", you'd need to track ctrlCpresses.
-                // For now, let 'a' be the primary way to stop a session.
-                // If q is pressed when not typing, and no session, then quit.
-                if msg.String() == "q" && (m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.reasonInput == "")) {
-                     return m, tea.Quit
-                }
+				// Returning m, tea.Quit here would be the old behavior.
+				// To implement "Ctrl+C again", you'd need to track ctrlCpresses.
+				// For now, let 'a' be the primary way to stop a session.
+				// If q is pressed when not typing, and no session, then quit.
+				if msg.String() == "q" && (m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.reasonInput == "")) {
+					return m, tea.Quit
+				}
 
 			} else if m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.reasonInput == "") {
 				return m, tea.Quit
@@ -233,7 +223,6 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					m.reasonInput += msg.String()
 				}
 			}
-
 
 		case "ctrl+n":
 			m.activeTab = (m.activeTab + 1) % numTabs
@@ -251,7 +240,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.logMessages = append(m.logMessages, "A session is already active. Abort or wait for completion.")
 						m.err = fmt.Errorf("session already active")
 					} else {
-						jobs := []struct{URL string; Reason string}{{URL: m.targetURLInput, Reason: m.reasonInput}}
+						jobs := []struct {
+							URL    string
+							Reason string
+						}{{URL: m.targetURLInput, Reason: m.reasonInput}}
 						m.session = session.NewSession(m.reporter, jobs)
 						m.err = m.session.Start()
 						if m.err != nil {
@@ -293,22 +285,21 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 	}
 
-    // Update session status string if session exists
-    if m.session != nil {
-         sState := m.session.GetState()
-         m.sessionStatus = fmt.Sprintf("Session: %s (%d/%d jobs)", sState.String(), m.session.ProcessedJobs, len(m.session.Jobs))
-         // If state indicates termination, but we're still getting messages, ensure we keep listening
-         if (sState == session.Running || sState == session.Paused || sState == session.Stopping) && len(cmds) == 0 {
-             // Add listener if not already added by sessionLogMsg itself
-             // This ensures that if Update is called for other reasons (e.g. WindowSizeMsg), listener is re-added.
-             // However, this might lead to multiple listeners if not careful.
-             // A better approach is to have a flag in Model `isListening` or ensure `listenForSessionLogsCmd` is idempotent / self-terminating.
-             // For now, rely on sessionLogMsg to re-trigger listening.
-         }
-    } else {
-        m.sessionStatus = "Session: Idle"
-    }
-
+	// Update session status string if session exists
+	if m.session != nil {
+		sState := m.session.GetState()
+		m.sessionStatus = fmt.Sprintf("Session: %s (%d/%d jobs)", sState.String(), m.session.ProcessedJobs, len(m.session.Jobs))
+		// If state indicates termination, but we're still getting messages, ensure we keep listening
+		if (sState == session.Running || sState == session.Paused || sState == session.Stopping) && len(cmds) == 0 {
+			// Add listener if not already added by sessionLogMsg itself
+			// This ensures that if Update is called for other reasons (e.g. WindowSizeMsg), listener is re-added.
+			// However, this might lead to multiple listeners if not careful.
+			// A better approach is to have a flag in Model `isListening` or ensure `listenForSessionLogsCmd` is idempotent / self-terminating.
+			// For now, rely on sessionLogMsg to re-trigger listening.
+		}
+	} else {
+		m.sessionStatus = "Session: Idle"
+	}
 
 	return m, tea.Batch(cmds...)
 }
@@ -333,10 +324,18 @@ func (m Model) View() string {
 	switch m.activeTab {
 	case TargetInputTab:
 		s.WriteString("Target URL:\n")
-		if m.inputFocus == 0 { s.WriteString("> ") } else { s.WriteString("  ") }
+		if m.inputFocus == 0 {
+			s.WriteString("> ")
+		} else {
+			s.WriteString("  ")
+		}
 		s.WriteString(m.targetURLInput + "\n\n")
 		s.WriteString("Reason:\n")
-		if m.inputFocus == 1 { s.WriteString("> ") } else { s.WriteString("  ") }
+		if m.inputFocus == 1 {
+			s.WriteString("> ")
+		} else {
+			s.WriteString("  ")
+		}
 		s.WriteString(m.reasonInput + "\n\n")
 		s.WriteString("(Ctrl+N/P Tabs | Tab Key Inputs | Enter Submit)\n")
 		if m.session != nil && (m.session.GetState() == session.Running || m.session.GetState() == session.Paused) {
@@ -357,7 +356,6 @@ func (m Model) View() string {
 			s.WriteString(fmt.Sprintf("Healthy proxies: %d\n", healthyCount))
 		}
 
-
 	case SettingsTab:
 		s.WriteString("Settings - Coming Soon\n")
 		if m.appConfig != nil {
@@ -368,7 +366,9 @@ func (m Model) View() string {
 	case LiveSessionLogsTab:
 		s.WriteString("Live Session Logs (from session.LogChannel & TUI direct):\n")
 		maxLogsToShow := m.height - 7 // Adjusted for tab bar, status, and other lines
-		if maxLogsToShow < 1 { maxLogsToShow = 1 }
+		if maxLogsToShow < 1 {
+			maxLogsToShow = 1
+		}
 		start := 0
 		if len(m.logMessages) > maxLogsToShow {
 			start = len(m.logMessages) - maxLogsToShow
@@ -378,7 +378,7 @@ func (m Model) View() string {
 		}
 	case LogReviewTab:
 		s.WriteString("Log Review & Export - Coming Soon\n")
-		s.WriteString("Full structured logs are in 'sentinelgo_session.log'.\n")
+		s.WriteString("Full structured logs are in 'sentinelgo/sentinelgo_session.log'.\n")
 	}
 
 	// Error display

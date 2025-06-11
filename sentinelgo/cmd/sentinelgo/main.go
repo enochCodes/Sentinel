@@ -4,16 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"sentinelgo/config"
-	"sentinelgo/tui" // New TUI package
-	"sentinelgo/utils" // Logger
-
-	"fmt"
-	"os"
-
-	"sentinelgo/config"
-	"sentinelgo/tui" // New TUI package
-	"sentinelgo/utils" // Logger
+	"sentinelgo/sentinelgo/config"
+	"sentinelgo/sentinelgo/tui"   // New TUI package
+	"sentinelgo/sentinelgo/utils" // Logger
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -21,11 +14,11 @@ import (
 var version = "dev" // Default version, will be overridden by LDFLAGS
 
 func main() {
-	fmt.Printf("SentinelGo version %s\n", version) // Print version at startup
+	fmt.Printf("sentinelgo version %s\n", version) // Print version at startup
 
 	// 1. Load Application Configuration
 	// Assuming sentinel.yaml is in a 'config' directory relative to where the binary is run,
-	// or in the project root 'sentinelgo/config/sentinel.yaml' during development.
+	// or in the project root 'sentinelgo/sentinelgo/config/sentinel.yaml' during development.
 	// For robustness, consider allowing config path via CLI flag or environment variable.
 	appCfg, err := config.LoadAppConfig("config/sentinel.yaml")
 	if err != nil {
@@ -34,23 +27,22 @@ func main() {
 		// Otherwise, handle critical config errors more gracefully or exit.
 		// For now, we assume LoadAppConfig provides a usable default config.
 	}
-    if appCfg == nil { // Ensure appCfg is not nil if LoadAppConfig can return nil on error
-        fmt.Fprintf(os.Stderr, "Critical error: AppConfig is nil after loading. Exiting.\n")
-        // Create a minimal default config if absolutely necessary to prevent nil pointer dereferences
-        appCfg = &config.AppConfig{
-            MaxRetries: 3, // Sensible default
-            RiskThreshold: 75.0, // Sensible default
-            DefaultHeaders: make(map[string]string),
-            APIKeys: make(map[string]string),
-        }
-    }
-
+	if appCfg == nil { // Ensure appCfg is not nil if LoadAppConfig can return nil on error
+		fmt.Fprintf(os.Stderr, "Critical error: AppConfig is nil after loading. Exiting.\n")
+		// Create a minimal default config if absolutely necessary to prevent nil pointer dereferences
+		appCfg = &config.AppConfig{
+			MaxRetries:     3,    // Sensible default
+			RiskThreshold:  75.0, // Sensible default
+			DefaultHeaders: make(map[string]string),
+			APIKeys:        make(map[string]string),
+		}
+	}
 
 	// 2. Initialize Logger
 	// For TUI, logging to stdout might interfere. A log file is better.
 	// Or, a custom io.Writer that sends log messages to the TUI model via tea.Cmd.
 	// For now, let's use a file, and also prepare for TUI log display.
-	logFile, err := os.OpenFile("sentinelgo_session.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	logFile, err := os.OpenFile("sentinelgo/sentinelgo_session.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Warning: Could not open log file: %v. Logging to stdout.\n", err)
 		// Fallback to stdout if file logging fails
@@ -68,8 +60,7 @@ func main() {
 		appLogger = utils.NewLogger(os.Stdout, "INFO")
 	}
 
-	appLogger.Info(utils.LogEntry{Message: "SentinelGo application starting..."})
-
+	appLogger.Info(utils.LogEntry{Message: "sentinelgo/sentinelgo application starting..."})
 
 	// 3. Create Initial TUI Model
 	// Pass the loaded config and logger to the TUI model.
@@ -85,11 +76,10 @@ func main() {
 		}
 	}()
 
-
 	if _, err := p.Run(); err != nil {
 		appLogger.Error(utils.LogEntry{Message: "TUI program exited with error", Error: err.Error()})
 		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 		os.Exit(1)
 	}
-    appLogger.Info(utils.LogEntry{Message: "SentinelGo application exited cleanly."})
+	appLogger.Info(utils.LogEntry{Message: "sentinelgo/sentinelgo application exited cleanly."})
 }

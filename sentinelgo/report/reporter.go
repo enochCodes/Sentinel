@@ -1,7 +1,6 @@
 package report
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,13 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"strings"
-	"time"
-
-	"sentinelgo/ai" // Import AI package
-	"sentinelgo/config"
-	"sentinelgo/proxy"
-	"sentinelgo/utils"
+	"sentinelgo/sentinelgo/ai" // Import AI package
+	"sentinelgo/sentinelgo/config"
+	"sentinelgo/sentinelgo/proxy"
+	"sentinelgo/sentinelgo/utils"
 )
 
 // defaultUserAgents is a fallback list if not provided in config.
