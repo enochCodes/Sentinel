@@ -114,7 +114,7 @@ func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
                                 .::::::::::...         ...::::::::::
                                   ....                         ....
 	` + "\033[0m")
-	time.Sleep(1 * time.Second)
+	time.Sleep(3 * time.Second)
 	m := Model{
 		activeTab:        TargetInputTab,
 		tabsDisplayNames: tabNames,
