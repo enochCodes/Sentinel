@@ -129,9 +129,9 @@ func (l *Logger) Error(entry LogEntry) {
 // Fatal logs a message at LevelFatal and then calls os.Exit(1).
 // For now, we will just log as error, as os.Exit behavior might be too abrupt for the tool.
 // Actual os.Exit can be added if specifically required later.
-func (l *Logger) Fatal(entry LogEntry) {
-	entry.Message = fmt.Sprintf("FATAL: %s", entry.Message) // Prepend FATAL to message
-	l.Log(LevelError, entry)                                // Log as LevelError to avoid os.Exit in library code
+func (l.Logger) Fatal(entry LogEntry) {
+    entry.Message = fmt.Sprintf("FATAL: %s", entry.Message) // Prepend FATAL to message
+	l.Log(LevelError, entry) // Log as LevelError to avoid os.Exit in library code
 	// If os.Exit is truly needed:
 	// l.Log(LevelFatal, entry)
 	// os.Exit(1)

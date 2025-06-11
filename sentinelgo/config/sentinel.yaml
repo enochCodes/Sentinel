@@ -1,24 +1,12 @@
-# SentinelGo++ Configuration
-
 defaultheaders:
   User-Agent: "SentinelGo Client v1.0"
   Accept-Language: "en-US,en;q=0.9"
-  # ProxyFile: "sentinelgo/config/proxies.csv"   # Optional: path to proxy list
-
 customcookies:
   - name: "session_id"
     value: "dummycookie123"
     path: "/"
     domain: "example.com"
-    # expires: "2025-01-01T00:00:00Z"           # Optional
-    # secure: true                              # Optional
-    # httpOnly: true                            # Optional
-
-maxretries: 3            # Number of retries for failed requests
-riskthreshold: 75.0      # Risk threshold for reporting (0-100)
-
+maxretries: 3
+riskthreshold: 80.5
 apikeys:
   virustotal: "YOUR_VT_API_KEY"
-  # add other services as needed
-
-# Add more configuration options below as needed

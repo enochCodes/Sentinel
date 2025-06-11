@@ -1,6 +1,7 @@
 package report
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -10,10 +11,13 @@ import (
 	"strings"
 	"time"
 
-	"sentinelgo/sentinelgo/ai" // Import AI package
-	"sentinelgo/sentinelgo/config"
-	"sentinelgo/sentinelgo/proxy"
-	"sentinelgo/sentinelgo/utils"
+	"strings"
+	"time"
+
+	"sentinelgo/ai" // Import AI package
+	"sentinelgo/config"
+	"sentinelgo/proxy"
+	"sentinelgo/utils"
 )
 
 // defaultUserAgents is a fallback list if not provided in config.
@@ -48,7 +52,8 @@ func NewReporter(cfg *config.AppConfig, pm *proxy.ProxyManager, logger *utils.Lo
 
 // SendReport attempts to send a single report to the targetURL.
 // It handles proxy selection, request configuration, retries, and logging.
-func (r *Reporter) SendReport(targetURL string, reportReason string, sessionID string) error {
+// reportReason has been removed from parameters.
+func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 	var lastErr error
 
 	for attempt := 0; attempt < r.Config.MaxRetries; attempt++ {
@@ -79,24 +84,15 @@ func (r *Reporter) SendReport(targetURL string, reportReason string, sessionID s
         // r.HTTPClient.Timeout = 25 * time.Second
 
 
-		// Request Body (Placeholder - actual form data would be constructed here)
-		// For now, using a simple string body. In a real scenario, this would be form data.
-		// e.g. form := url.Values{}; form.Add("reason", reportReason); reqBody := strings.NewReader(form.Encode())
-		var reqBody io.Reader
-		var reqBodyStr string // For logging
-		if reportReason != "" { // Assuming reportReason is part of the body
-			// This is a placeholder. Actual body structure depends on TikTok API.
-			// It could be JSON: `{"report_reason": reportReason, "object_id": ...}`
-			// Or form-urlencoded.
-			formData := url.Values{}
-			formData.Set("reason", reportReason) // Example field
-			formData.Set("session_id", sessionID) // Example field
-			reqBodyStr = formData.Encode()
-			reqBody = strings.NewReader(reqBodyStr)
-		}
+		// Request Body is now nil for POST as Reason is removed.
+		// If a body is ever needed, it would be constructed here from other sources.
+		var reqBody io.Reader // Remains nil for now
+		var reqBodyStr string // Empty for logging, unless a default body is decided
 
+		// If Content-Type was set based on reportReason, it might need adjustment or removal
+		// if no body is sent. For POST with nil body, Content-Type is often omitted or minimal.
 
-		req, err := http.NewRequestWithContext(ctx, "POST", targetURL, reqBody)
+		req, err := http.NewRequestWithContext(ctx, "POST", targetURL, reqBody) // reqBody is nil
 		if err != nil {
 			r.Logger.Error(utils.LogEntry{SessionID: sessionID, Message: "Failed to create request", ReportURL: targetURL, Error: err.Error()})
 			// Non-retryable if request creation fails
@@ -115,9 +111,10 @@ func (r *Reporter) SendReport(targetURL string, reportReason string, sessionID s
 				req.Header.Set(key, value)
 			}
 		}
-        if reqBody != nil && req.Header.Get("Content-Type") == "" {
-             req.Header.Set("Content-Type", "application/x-www-form-urlencoded") // Common for form data
-        }
+        // Content-Type for empty body POST is usually not set or handled by http client.
+        // If a specific Content-Type is required even for empty body, set it here.
+        // Example: req.Header.Set("Content-Type", "application/json") if API expects it.
+        // For now, let http client manage it or rely on server leniency for empty POST.
 
 
 		// Add Custom Cookies

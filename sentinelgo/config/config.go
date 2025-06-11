@@ -98,3 +98,12 @@ func SaveSessionState(filePath string, state *SessionState) error {
 
 	return os.WriteFile(filePath, data, 0600) // Use 0600 for permissions
 }
+
+// SaveAppConfig marshals AppConfig to YAML and writes it to the specified filePath.
+func SaveAppConfig(filePath string, cfg *AppConfig) error {
+	data, err := yaml.Marshal(cfg)
+	if err != nil {
+		return err
+	}
+	return os.WriteFile(filePath, data, 0644) // Use 0644 for config files
+}

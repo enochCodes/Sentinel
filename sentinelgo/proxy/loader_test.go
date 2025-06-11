@@ -2,8 +2,10 @@ package proxy
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/url"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -66,13 +68,14 @@ proxy5.example.com,9050
 	assert.Equal(t, "DE", proxies[2].Region)
 
 	// Check proxy4 (no region)
-	assert.Equal(t, "http://user4:pass4@proxy4.example.com:9090", proxies[3].URL.String())
+    assert.Equal(t, "http://user4:pass4@proxy4.example.com:9090", proxies[3].URL.String())
 	assert.Equal(t, "", proxies[3].Region)
 
 	// Check proxy5 (no auth, no region)
 	assert.Equal(t, "http://proxy5.example.com:9050", proxies[4].URL.String())
 	assert.Equal(t, "proxy5.example.com,9050", proxies[4].OriginalString)
 	assert.Equal(t, "", proxies[4].Region)
+
 
 	// Test CSV with ip:port:user:pass:region format
 	csvContentColon := `proxyhost:port:user:pass:region
@@ -97,21 +100,22 @@ proxy10.example.com:7004:user10 # user, no pass, no region
 	assert.Equal(t, "", proxiesColon[1].Region)
 
 	// Test proxy8 - this depends on how parseProxyString handles "user:" or ":pass"
-	// Current parseProxyString might interpret "pass8" as username if only one part after @.
-	// The CSV loader's specific logic for ip:port:user:pass is `userInfo := strings.Join(parts[2:4], ":")`
-	// So if parts[3] is empty, it becomes "user:", if parts[2] is empty, it's ":pass"
+    // Current parseProxyString might interpret "pass8" as username if only one part after @.
+    // The CSV loader's specific logic for ip:port:user:pass is `userInfo := strings.Join(parts[2:4], ":")`
+    // So if parts[3] is empty, it becomes "user:", if parts[2] is empty, it's ":pass"
 	assert.Equal(t, "http://pass8@proxy8.example.com:7002", proxiesColon[2].URL.String()) // Assuming "pass8" becomes user if user field is empty
 
 	assert.Equal(t, "http://proxy9.example.com:7003", proxiesColon[3].URL.String())
 
-	assert.Equal(t, "http://user10@proxy10.example.com:7004", proxiesColon[4].URL.String())
+    assert.Equal(t, "http://user10@proxy10.example.com:7004", proxiesColon[4].URL.String())
+
 
 }
 
 func TestLoadProxiesJSON(t *testing.T) {
 	jsonData := []map[string]string{
 		{"proxy": "http://user1:pass1@jsonproxy1.com:8080", "region": "US"},
-		{"proxy": "https://jsonproxy2.com:443"},          // No auth, no region, https scheme
+		{"proxy": "https://jsonproxy2.com:443"}, // No auth, no region, https scheme
 		{"proxy": "jsonproxy3.com:3128", "region": "GB"}, // No scheme, no auth
 	}
 	jsonPath := createTempJSON(t, jsonData)
@@ -161,36 +165,36 @@ func TestLoadProxies_APIPlaceholder(t *testing.T) {
 }
 
 func TestParseProxyString(t *testing.T) {
-	tests := []struct {
-		name          string
-		proxyStr      string
-		defaultScheme string
-		expectedURL   string
-		expectError   bool
-	}{
-		{"full_http", "http://user:pass@host.com:8080", "http", "http://user:pass@host.com:8080", false},
-		{"full_https", "https://user:pass@host.com:443", "http", "https://user:pass@host.com:443", false},
-		{"no_scheme_user_pass", "user:pass@host.com:80", "http", "http://user:pass@host.com:80", false},
-		{"no_scheme_no_auth", "host.com:8888", "http", "http://host.com:8888", false},
-		{"no_scheme_user_only", "user@host.com:80", "http", "http://user@host.com:80", false},        // url.Parse behavior
-		{"no_scheme_user_colon_only", "user:@host.com:80", "http", "http://user@host.com:80", false}, // url.Parse behavior, password empty
-		{"ip_port_only", "127.0.0.1:3128", "http", "http://127.0.0.1:3128", false},
-		{"ip_port_user_pass", "user1:secret@192.168.1.1:8000", "http", "http://user1:secret@192.168.1.1:8000", false},
-		{"empty_string", "", "http", "", true}, // url.Parse returns error on empty string
-		{"invalid_url", "http://%invalid", "http", "", true},
+    tests := []struct {
+        name          string
+        proxyStr      string
+        defaultScheme string
+        expectedURL   string
+        expectError   bool
+    }{
+        {"full_http", "http://user:pass@host.com:8080", "http", "http://user:pass@host.com:8080", false},
+        {"full_https", "https://user:pass@host.com:443", "http", "https://user:pass@host.com:443", false},
+        {"no_scheme_user_pass", "user:pass@host.com:80", "http", "http://user:pass@host.com:80", false},
+        {"no_scheme_no_auth", "host.com:8888", "http", "http://host.com:8888", false},
+        {"no_scheme_user_only", "user@host.com:80", "http", "http://user@host.com:80", false}, // url.Parse behavior
+        {"no_scheme_user_colon_only", "user:@host.com:80", "http", "http://user@host.com:80", false}, // url.Parse behavior, password empty
+        {"ip_port_only", "127.0.0.1:3128", "http", "http://127.0.0.1:3128", false},
+        {"ip_port_user_pass", "user1:secret@192.168.1.1:8000", "http", "http://user1:secret@192.168.1.1:8000", false},
+        {"empty_string", "", "http", "", true}, // url.Parse returns error on empty string
+        {"invalid_url", "http://%invalid", "http", "", true},
 		{"socks5_scheme", "socks5://user:pass@host.com:1080", "http", "socks5://user:pass@host.com:1080", false},
 		{"no_scheme_default_socks", "user:pass@host.com:1080", "socks5", "socks5://user:pass@host.com:1080", false},
-	}
+    }
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			parsedURL, err := parseProxyString(tt.proxyStr, tt.defaultScheme)
-			if tt.expectError {
-				assert.Error(t, err)
-			} else {
-				require.NoError(t, err)
-				assert.Equal(t, tt.expectedURL, parsedURL.String())
-			}
-		})
-	}
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            parsedURL, err := parseProxyString(tt.proxyStr, tt.defaultScheme)
+            if tt.expectError {
+                assert.Error(t, err)
+            } else {
+                require.NoError(t, err)
+                assert.Equal(t, tt.expectedURL, parsedURL.String())
+            }
+        })
+    }
 }
