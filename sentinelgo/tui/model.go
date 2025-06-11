@@ -2,21 +2,23 @@ package tui
 
 import (
 	"fmt"
-	"github.com/charmbracelet/lipgloss" // Import lipgloss
-	"net/http"                         // For http.Cookie if AppConfig is detailed
-	"strconv"                          // For parsing numReportsInput & settings
+	"strconv" // For parsing numReportsInput & settings
 	"strings"
 	"time" // For BatchCheckProxies delay example
+
+	"github.com/charmbracelet/lipgloss" // Import lipgloss
+	// For http.Cookie if AppConfig is detailed
+
 	// "github.com/google/uuid" // No longer needed here directly
 
-	"sentinelgo/ai"      // Import AI package
-	"sentinelgo/config"
-	"sentinelgo/proxy"   // Import proxy package
-	"sentinelgo/report"  // Import report package
-	"sentinelgo/session" // Import session package
-	"sentinelgo/utils"
+	"sentinelgo/sentinelgo/ai" // Import AI package
+	"sentinelgo/sentinelgo/config"
+	"sentinelgo/sentinelgo/proxy"   // Import proxy package
+	"sentinelgo/sentinelgo/report"  // Import report package
+	"sentinelgo/sentinelgo/session" // Import session package
+	"sentinelgo/sentinelgo/utils"
 
-	"github.com/charmbracelet/bubbletea"
+	tea "github.com/charmbracelet/bubbletea"
 )
 
 // Tab defines the different views/tabs in the TUI.
@@ -70,12 +72,12 @@ type Model struct {
 	sessionStatus    string
 
 	// Settings Tab State
-	editableSettings  []EditableSettingEntry
-	settingsFocusIndex int  // Which setting item is currently highlighted/selected
-	editingSetting    bool // True if currently in "edit mode" for a setting
-	currentEditValue  string // Buffer to hold the text being typed for the setting
-	originalEditValue interface{} // To store the original value if user cancels edit
-	editingSettingPath string // Path of the setting being edited
+	editableSettings   []EditableSettingEntry
+	settingsFocusIndex int         // Which setting item is currently highlighted/selected
+	editingSetting     bool        // True if currently in "edit mode" for a setting
+	currentEditValue   string      // Buffer to hold the text being typed for the setting
+	originalEditValue  interface{} // To store the original value if user cancels edit
+	editingSettingPath string      // Path of the setting being edited
 }
 
 // NewInitialModel creates the initial TUI model.
@@ -85,7 +87,7 @@ func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
 		tabsDisplayNames: tabNames,
 		appConfig:        cfg,
 		logger:           logger,
-		logMessages:      []string{LogTimestampStyle.Render(time.Now().Format("15:04:05")) + " " + LogLevelInfoStyle.Render(LogPrefixInfo + " TUI Initialized. Welcome to SentinelGo!")},
+		logMessages:      []string{LogTimestampStyle.Render(time.Now().Format("15:04:05")) + " " + LogLevelInfoStyle.Render(LogPrefixInfo+" TUI Initialized. Welcome to SentinelGo!")},
 		inputFocus:       0,
 		numReportsInput:  "1",
 	}
@@ -112,7 +114,7 @@ func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
 		go func() {
 			checkTimeout := 10 * time.Second
 			concurrency := 5
-			m.proxyManager.BatchCheckProxies(m.proxyManager.GetAllProxies(), checkTimeout, concurrency)
+			proxy.BatchCheckProxies(m.proxyManager.GetAllProxies(), checkTimeout, concurrency)
 			m.logger.Info(utils.LogEntry{Message: "Initial batch proxy check completed."})
 		}()
 	}
@@ -167,11 +169,16 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		var logStyle lipgloss.Style
 		var prefix string
 		switch logEntry.Level {
-		case session.LogLevelUpdateInfo: logStyle, prefix = LogLevelInfoStyle, LogPrefixInfo
-		case session.LogLevelUpdateError: logStyle, prefix = LogLevelErrorStyle, LogPrefixError
-		case session.LogLevelUpdateWarn: logStyle, prefix = LogLevelWarnStyle, LogPrefixWarn
-		case session.LogLevelUpdateDebug: logStyle, prefix = LogLevelDebugStyle, LogPrefixDebug
-		default: logStyle, prefix = NormalTextStyle, "[???]"
+		case session.LogLevelUpdateInfo:
+			logStyle, prefix = LogLevelInfoStyle, LogPrefixInfo
+		case session.LogLevelUpdateError:
+			logStyle, prefix = LogLevelErrorStyle, LogPrefixError
+		case session.LogLevelUpdateWarn:
+			logStyle, prefix = LogLevelWarnStyle, LogPrefixWarn
+		case session.LogLevelUpdateDebug:
+			logStyle, prefix = LogLevelDebugStyle, LogPrefixDebug
+		default:
+			logStyle, prefix = NormalTextStyle, "[???]"
 		}
 		timestampStr := LogTimestampStyle.Render(logEntry.Timestamp.Format("15:04:05.000"))
 		styledMsgPart := logStyle.Render(prefix + " " + logEntry.Message)
@@ -212,7 +219,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						parseError = fmt.Errorf("invalid integer: %w", err)
 						isValid = false
 					} else {
-						if settingToEdit.Path == "MaxRetries" { m.appConfig.MaxRetries = val }
+						if settingToEdit.Path == "MaxRetries" {
+							m.appConfig.MaxRetries = val
+						}
 						settingToEdit.CurrentValue = val
 					}
 				case "float":
@@ -221,7 +230,9 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						parseError = fmt.Errorf("invalid float: %w", err)
 						isValid = false
 					} else {
-						if settingToEdit.Path == "RiskThreshold" { m.appConfig.RiskThreshold = val }
+						if settingToEdit.Path == "RiskThreshold" {
+							m.appConfig.RiskThreshold = val
+						}
 						settingToEdit.CurrentValue = val
 					}
 				case "string":
@@ -255,9 +266,29 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				sState, _, _, _, _, _ := m.session.GetStats()
 				if sState == session.Running || sState == session.Paused {
 					switch msg.String() {
-					case "p": if sState == session.Running { if err := m.session.Pause(); err != nil { m.err = err } else { m.logMessages = append(m.logMessages, LogLevelWarnStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixWarn+" Pause command sent.")) }}
-					case "r": if sState == session.Paused { if err := m.session.Resume(); err != nil { m.err = err } else { m.logMessages = append(m.logMessages, LogLevelWarnStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixWarn+" Resume command sent.")) }}
-					case "a": if err := m.session.Abort(); err != nil { m.err = err } else { m.logMessages = append(m.logMessages, LogLevelWarnStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixWarn+" Abort command sent.")) }}
+					case "p":
+						if sState == session.Running {
+							if err := m.session.Pause(); err != nil {
+								m.err = err
+							} else {
+								m.logMessages = append(m.logMessages, LogLevelWarnStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixWarn+" Pause command sent."))
+							}
+						}
+					case "r":
+						if sState == session.Paused {
+							if err := m.session.Resume(); err != nil {
+								m.err = err
+							} else {
+								m.logMessages = append(m.logMessages, LogLevelWarnStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixWarn+" Resume command sent."))
+							}
+						}
+					case "a":
+						if err := m.session.Abort(); err != nil {
+							m.err = err
+						} else {
+							m.logMessages = append(m.logMessages, LogLevelWarnStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixWarn+" Abort command sent."))
+						}
+					}
 				}
 			}
 
@@ -269,13 +300,30 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					sState, _, _, _, _, _ := m.session.GetStats()
 					if sState == session.Running || sState == session.Paused {
 						m.logMessages = append(m.logMessages, ErrorTextStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixWarn+" Session active. Press 'a' to abort session first, or Ctrl+C again to force quit."))
-						if msg.String() == "q" && (m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.numReportsInput == "")) {}
-					} else if m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.numReportsInput == "") { return m, tea.Quit }
-				} else if m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.numReportsInput == "") { return m, tea.Quit }
-				if m.activeTab == TargetInputTab && msg.String() == "q" { if m.inputFocus == 0 { m.targetURLInput += msg.String() } } else if msg.String() == "ctrl+c" { return m, tea.Quit }
+						if msg.String() == "q" && (m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.numReportsInput == "")) {
+						}
+					} else if m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.numReportsInput == "") {
+						return m, tea.Quit
+					}
+				} else if m.activeTab != TargetInputTab || (m.targetURLInput == "" && m.numReportsInput == "") {
+					return m, tea.Quit
+				}
+				if m.activeTab == TargetInputTab && msg.String() == "q" {
+					if m.inputFocus == 0 {
+						m.targetURLInput += msg.String()
+					}
+				} else if msg.String() == "ctrl+c" {
+					return m, tea.Quit
+				}
 
-			case "ctrl+n": m.activeTab = (m.activeTab + 1) % numTabs; m.editingSetting = false; m.settingsFocusIndex = 0
-			case "ctrl+p": m.activeTab = (m.activeTab - 1 + numTabs) % numTabs; m.editingSetting = false; m.settingsFocusIndex = 0
+			case "ctrl+n":
+				m.activeTab = (m.activeTab + 1) % numTabs
+				m.editingSetting = false
+				m.settingsFocusIndex = 0
+			case "ctrl+p":
+				m.activeTab = (m.activeTab - 1 + numTabs) % numTabs
+				m.editingSetting = false
+				m.settingsFocusIndex = 0
 
 			case "ctrl+s": // Save settings (only if on settings tab)
 				if m.activeTab == SettingsTab {
@@ -288,26 +336,26 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 						m.logMessages = append(m.logMessages, SuccessTextStyle.Render(ts+" "+LogPrefixInfo+" Settings saved successfully to config/sentinel.yaml."))
 					}
 				}
-            case "ctrl+r": // Reload settings (only if on settings tab)
-                if m.activeTab == SettingsTab {
-                    newCfg, err := config.LoadAppConfig("config/sentinel.yaml")
-                    ts := LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))
-                    if err != nil {
-                        m.err = fmt.Errorf("failed to reload config: %w", err)
-                        m.logMessages = append(m.logMessages, ErrorTextStyle.Render(ts+" "+LogPrefixError+" Failed to reload settings: "+err.Error()))
-                    } else {
-                        m.appConfig = newCfg
-                        m.populateEditableSettings() // Refresh the list in TUI
-                        m.logMessages = append(m.logMessages, SuccessTextStyle.Render(ts+" "+LogPrefixInfo+" Settings reloaded from config/sentinel.yaml."))
-                    }
-                }
-
+			case "ctrl+r": // Reload settings (only if on settings tab)
+				if m.activeTab == SettingsTab {
+					newCfg, err := config.LoadAppConfig("config/sentinel.yaml")
+					ts := LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))
+					if err != nil {
+						m.err = fmt.Errorf("failed to reload config: %w", err)
+						m.logMessages = append(m.logMessages, ErrorTextStyle.Render(ts+" "+LogPrefixError+" Failed to reload settings: "+err.Error()))
+					} else {
+						m.appConfig = newCfg
+						m.populateEditableSettings() // Refresh the list in TUI
+						m.logMessages = append(m.logMessages, SuccessTextStyle.Render(ts+" "+LogPrefixInfo+" Settings reloaded from config/sentinel.yaml."))
+					}
+				}
 
 			// Tab-specific keybindings
 			default:
 				if m.activeTab == TargetInputTab {
 					switch msg.String() {
-					case "tab": m.inputFocus = (m.inputFocus + 1) % 2
+					case "tab":
+						m.inputFocus = (m.inputFocus + 1) % 2
 					case "enter":
 						numReportsInt, err := strconv.Atoi(m.numReportsInput)
 						if err != nil || numReportsInt <= 0 {
@@ -317,7 +365,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							m.logMessages = append(m.logMessages, ErrorTextStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixError+" Target URL cannot be empty."))
 							m.err = fmt.Errorf("target URL cannot be empty")
 						} else {
-							currentSessionState := session.Idle; if m.session != nil { currentSessionState, _,_,_,_,_ = m.session.GetStats() }
+							currentSessionState := session.Idle
+							if m.session != nil {
+								currentSessionState, _, _, _, _, _ = m.session.GetStats()
+							}
 							if currentSessionState == session.Running || currentSessionState == session.Paused {
 								m.logMessages = append(m.logMessages, ErrorTextStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixError+" A session is already active. Abort or wait."))
 								m.err = fmt.Errorf("session already active")
@@ -330,25 +381,42 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 									m.logMessages = append(m.logMessages, LogLevelInfoStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixInfo+fmt.Sprintf(" New session started for %d reports to %s.", numReportsInt, m.targetURLInput)))
 									cmds = append(cmds, m.listenForSessionLogsCmd())
 								}
-								m.targetURLInput = ""; m.inputFocus = 0
+								m.targetURLInput = ""
+								m.inputFocus = 0
 							}
 						}
 					case "backspace":
-						if m.inputFocus == 0 && len(m.targetURLInput) > 0 { m.targetURLInput = m.targetURLInput[:len(m.targetURLInput)-1] }
-						if m.inputFocus == 1 && len(m.numReportsInput) > 0 { m.numReportsInput = m.numReportsInput[:len(m.numReportsInput)-1] }
+						if m.inputFocus == 0 && len(m.targetURLInput) > 0 {
+							m.targetURLInput = m.targetURLInput[:len(m.targetURLInput)-1]
+						}
+						if m.inputFocus == 1 && len(m.numReportsInput) > 0 {
+							m.numReportsInput = m.numReportsInput[:len(m.numReportsInput)-1]
+						}
 					default: // Character input
 						if msg.Type == tea.KeyRunes && !strings.Contains(msg.String(), "ctrl+") {
 							runeStr := msg.String()
-							if m.inputFocus == 0 { m.targetURLInput += runeStr }
-							if m.inputFocus == 1 { for _, r := range runeStr { if r >= '0' && r <= '9' { m.numReportsInput += string(r) } } }
+							if m.inputFocus == 0 {
+								m.targetURLInput += runeStr
+							}
+							if m.inputFocus == 1 {
+								for _, r := range runeStr {
+									if r >= '0' && r <= '9' {
+										m.numReportsInput += string(r)
+									}
+								}
+							}
 						}
 					}
 				} else if m.activeTab == SettingsTab {
 					switch msg.String() {
 					case "up", "k":
-						if !m.editingSetting && m.settingsFocusIndex > 0 { m.settingsFocusIndex-- }
+						if !m.editingSetting && m.settingsFocusIndex > 0 {
+							m.settingsFocusIndex--
+						}
 					case "down", "j":
-						if !m.editingSetting && m.settingsFocusIndex < len(m.editableSettings)-1 { m.settingsFocusIndex++ }
+						if !m.editingSetting && m.settingsFocusIndex < len(m.editableSettings)-1 {
+							m.settingsFocusIndex++
+						}
 					case "enter":
 						if !m.editingSetting && m.settingsFocusIndex < len(m.editableSettings) {
 							m.editingSetting = true
@@ -357,7 +425,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 							m.currentEditValue = fmt.Sprintf("%v", m.originalEditValue)
 							m.logMessages = append(m.logMessages, LogLevelInfoStyle.Render(LogTimestampStyle.Render(time.Now().Format("15:04:05.000"))+" "+LogPrefixInfo+fmt.Sprintf(" Editing '%s'...", m.editableSettings[m.settingsFocusIndex].Name)))
 						}
-					// Esc to cancel edit is handled when m.editingSetting is true
+						// Esc to cancel edit is handled when m.editingSetting is true
 					}
 				}
 			}
@@ -408,7 +476,7 @@ func (m Model) renderFooter() string {
 	helpFullString := strings.Join(helpParts, HelpTextStyle.Render(" | "))
 	var footerElements []string
 	if m.err != nil {
-		errorMsg := ErrorMessageStyle.Render(SymbolFailure + " Error: " + m.err.Error())
+		errorMsg := ErrorTextStyle.Render(SymbolFailure + " Error: " + m.err.Error())
 		footerElements = append(footerElements, errorMsg)
 	}
 	footerElements = append(footerElements, HelpTextStyle.Render(helpFullString))
@@ -418,7 +486,9 @@ func (m Model) renderTabBar() string {
 	var renderedTabs []string
 	for i, name := range m.tabsDisplayNames {
 		style, prefix := TabStyle, SymbolNotFocused
-		if Tab(i) == m.activeTab { style, prefix = ActiveTabStyle, SymbolActiveTab }
+		if Tab(i) == m.activeTab {
+			style, prefix = ActiveTabStyle, SymbolActiveTab
+		}
 		renderedTabs = append(renderedTabs, style.Render(prefix+" "+name))
 	}
 	tabBarContainerStyle := lipgloss.NewStyle().BorderStyle(lipgloss.NormalBorder()).BorderBottom(true).BorderTop(false).BorderLeft(false).BorderRight(false).BorderForeground(BorderColor).PaddingBottom(0)
@@ -456,16 +526,21 @@ func (m Model) renderSettingsView() string {
 			currentValDisplay := fmt.Sprintf("%v", setting.CurrentValue)
 			if setting.Type == "float" { // Ensure float formatting
 				currentValDisplay = fmt.Sprintf("%.2f", setting.CurrentValue.(float64))
-				if setting.Path == "RiskThreshold" { currentValDisplay += "%" }
+				if setting.Path == "RiskThreshold" {
+					currentValDisplay += "%"
+				}
 			}
 			if setting.IsSensitive {
-				if len(currentValDisplay) > 8 { currentValDisplay = currentValDisplay[:4] + strings.Repeat("*", len(currentValDisplay)-8) + currentValDisplay[len(currentValDisplay)-4:]
-				} else if len(currentValDisplay) > 0 { currentValDisplay = strings.Repeat("*", len(currentValDisplay)) }
+				if len(currentValDisplay) > 8 {
+					currentValDisplay = currentValDisplay[:4] + strings.Repeat("*", len(currentValDisplay)-8) + currentValDisplay[len(currentValDisplay)-4:]
+				} else if len(currentValDisplay) > 0 {
+					currentValDisplay = strings.Repeat("*", len(currentValDisplay))
+				}
 			}
 			valueStr = valueStyle.Render(currentValDisplay)
 		}
 
-		content.WriteString(lineStyle.Render(focusMarker + keyStr + " " + valueStr) + "\n")
+		content.WriteString(lineStyle.Render(focusMarker+keyStr+" "+valueStr) + "\n")
 	}
 
 	content.WriteString(HelpTextStyle.Render("\n\n(Navigate with ↑/↓, Enter to Edit/Confirm, Esc to Cancel. Ctrl+S to Save, Ctrl+R to Reload from file.)"))
@@ -485,18 +560,26 @@ func (m Model) View() string {
 		urlLabel := NormalTextStyle.Render(SymbolInputMarker + " Target URL")
 		var urlInputView string
 		urlInputDisplay := m.targetURLInput
-		if m.inputFocus == 0 { urlInputDisplay += "_"; urlInputView = FocusedInputStyle.Render(SymbolFocused + " " + urlInputDisplay)
-		} else { urlInputView = BlurredInputStyle.Render(SymbolNotFocused + " " + urlInputDisplay) }
+		if m.inputFocus == 0 {
+			urlInputDisplay += "_"
+			urlInputView = FocusedInputStyle.Render(SymbolFocused + " " + urlInputDisplay)
+		} else {
+			urlInputView = BlurredInputStyle.Render(SymbolNotFocused + " " + urlInputDisplay)
+		}
 		currentTabView.WriteString(urlLabel + "\n" + urlInputView + "\n\n")
 		numReportsLabel := NormalTextStyle.Render(SymbolInputMarker + " Number of Reports")
 		var numReportsInputView string
 		numReportsInputDisplay := m.numReportsInput
-		if m.inputFocus == 1 { numReportsInputDisplay += "_"; numReportsInputView = FocusedInputStyle.Render(SymbolFocused + " " + numReportsInputDisplay)
-		} else { numReportsInputView = BlurredInputStyle.Render(SymbolNotFocused + " " + numReportsInputDisplay) }
+		if m.inputFocus == 1 {
+			numReportsInputDisplay += "_"
+			numReportsInputView = FocusedInputStyle.Render(SymbolFocused + " " + numReportsInputDisplay)
+		} else {
+			numReportsInputView = BlurredInputStyle.Render(SymbolNotFocused + " " + numReportsInputDisplay)
+		}
 		currentTabView.WriteString(numReportsLabel + "\n" + numReportsInputView + "\n\n")
 		helpText := "Tab: Switch Fields | Enter: Submit Report"
 		if m.session != nil {
-			sState,_,_,_,_,_ := m.session.GetStats()
+			sState, _, _, _, _, _ := m.session.GetStats()
 			if sState == session.Running || sState == session.Paused {
 				sessionHelp := lipgloss.JoinHorizontal(lipgloss.Left, HelpTextStyle.Render(SymbolPointer+" Session: "), helpKeyStyle.Bold(true).Render("P "), HelpTextStyle.Render("Pause | "), helpKeyStyle.Bold(true).Render("R "), HelpTextStyle.Render("Resume | "), helpKeyStyle.Bold(true).Render("A "), HelpTextStyle.Render("Abort"))
 				helpText += " | " + sessionHelp
@@ -506,23 +589,45 @@ func (m Model) View() string {
 	case ProxyMgmtTab:
 		currentTabView.WriteString(HeaderStyle.Render(SymbolListItem+" Proxy Pool Status") + "\n\n")
 		if m.proxyManager != nil {
-			allProxies := m.proxyManager.GetAllProxies(); totalProxies := len(allProxies); healthyCount := 0; unknownCount := 0
-			for _, p := range allProxies { if p.HealthStatus == "healthy" { healthyCount++ } else if p.HealthStatus == "unknown" { unknownCount++ } }
+			allProxies := m.proxyManager.GetAllProxies()
+			totalProxies := len(allProxies)
+			healthyCount := 0
+			unknownCount := 0
+			for _, p := range allProxies {
+				if p.HealthStatus == "healthy" {
+					healthyCount++
+				} else if p.HealthStatus == "unknown" {
+					unknownCount++
+				}
+			}
 			unhealthyCount := totalProxies - healthyCount - unknownCount
 			statsStyle := NormalTextStyle.Copy().PaddingBottom(0)
 			currentTabView.WriteString(statsStyle.Render(fmt.Sprintf("%s Total Proxies: %s", SymbolInfo, lipgloss.NewStyle().Bold(true).Render(fmt.Sprintf("%d", totalProxies)))) + "\n")
 			currentTabView.WriteString(statsStyle.Render(fmt.Sprintf("%s Healthy:       %s", SymbolSuccess, SuccessTextStyle.Render(fmt.Sprintf("%d", healthyCount)))) + "\n")
 			currentTabView.WriteString(statsStyle.Render(fmt.Sprintf("%s Unhealthy:     %s", SymbolFailure, ErrorTextStyle.Render(fmt.Sprintf("%d", unhealthyCount)))) + "\n")
-			if unknownCount > 0 { currentTabView.WriteString(statsStyle.Render(fmt.Sprintf("%s Unknown:       %s", SymbolWarning, WarningTextStyle.Render(fmt.Sprintf("%d", unknownCount)))) + "\n") }
+			if unknownCount > 0 {
+				currentTabView.WriteString(statsStyle.Render(fmt.Sprintf("%s Unknown:       %s", SymbolWarning, WarningTextStyle.Render(fmt.Sprintf("%d", unknownCount)))) + "\n")
+			}
 			currentTabView.WriteString("\n" + SubtleTextStyle.Render(SymbolInfo+" Initial health checks run in background. Statuses update over time.") + "\n")
-		} else { currentTabView.WriteString(WarningTextStyle.Render(SymbolWarning+" Proxy Manager not initialized.") + "\n") }
+		} else {
+			currentTabView.WriteString(WarningTextStyle.Render(SymbolWarning+" Proxy Manager not initialized.") + "\n")
+		}
 		currentTabView.WriteString(HelpTextStyle.Render("\n(Detailed proxy list, manual checks, and import/export coming soon...)"))
-	case SettingsTab: currentTabView.WriteString(m.renderSettingsView())
+	case SettingsTab:
+		currentTabView.WriteString(m.renderSettingsView())
 	case LiveSessionLogsTab:
 		currentTabView.WriteString(HeaderStyle.Render(SymbolListItem+" Live Session Logs") + "\n")
-		maxLogsToShow := m.height - 12; if maxLogsToShow < 1 { maxLogsToShow = 5 }
-		displayLogs := m.logMessages; if len(m.logMessages) > maxLogsToShow { displayLogs = m.logMessages[len(m.logMessages)-maxLogsToShow:] }
-		for _, styledMsg := range displayLogs { currentTabView.WriteString(styledMsg + "\n") }
+		maxLogsToShow := m.height - 12
+		if maxLogsToShow < 1 {
+			maxLogsToShow = 5
+		}
+		displayLogs := m.logMessages
+		if len(m.logMessages) > maxLogsToShow {
+			displayLogs = m.logMessages[len(m.logMessages)-maxLogsToShow:]
+		}
+		for _, styledMsg := range displayLogs {
+			currentTabView.WriteString(styledMsg + "\n")
+		}
 	case LogReviewTab:
 		currentTabView.WriteString(HeaderStyle.Render(SymbolListItem+" Log Review & Export") + "\n\n")
 		mainMessage := InfoTextStyle.Render(fmt.Sprintf("%s Log review and advanced export functionalities are currently under development.", SymbolInfo))
@@ -534,7 +639,9 @@ func (m Model) View() string {
 	}
 	footerView := m.renderFooter()
 	contentHeight := m.height - lipgloss.Height(headerView) - lipgloss.Height(tabBarView) - lipgloss.Height(footerView) - BoxStyle.GetVerticalPadding()
-	if contentHeight < 0 { contentHeight = 0 }
+	if contentHeight < 0 {
+		contentHeight = 0
+	}
 	contentBoxStyle := BoxStyle.Copy().MaxHeight(contentHeight).MaxWidth(m.width - BoxStyle.GetHorizontalBorderSize())
 	finalView := lipgloss.JoinVertical(lipgloss.Left, headerView, tabBarView, contentBoxStyle.Render(currentTabView.String()), footerView)
 	return AppStyle.Width(m.width).Height(m.height).Render(finalView)

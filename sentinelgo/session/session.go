@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
 	"github.com/google/uuid"
 
-	"sentinelgo/report"
+	"sentinelgo/sentinelgo/report"
 )
 
 // LogLevelUpdate defines the severity level for LogUpdate messages.
@@ -41,53 +42,62 @@ const (
 // String returns the string representation of SessionState.
 func (s SessionState) String() string {
 	switch s {
-	case Idle: return "Idle"
-	case Running: return "Running"
-	case Paused: return "Paused"
-	case Stopping: return "Stopping"
-	case Stopped: return "Stopped"
-	case Completed: return "Completed"
-	case Aborted: return "Aborted"
-	case Failed: return "Failed (Internal Error)"
-	default: return fmt.Sprintf("Unknown State (%d)", s)
+	case Idle:
+		return "Idle"
+	case Running:
+		return "Running"
+	case Paused:
+		return "Paused"
+	case Stopping:
+		return "Stopping"
+	case Stopped:
+		return "Stopped"
+	case Completed:
+		return "Completed"
+	case Aborted:
+		return "Aborted"
+	case Failed:
+		return "Failed (Internal Error)"
+	default:
+		return fmt.Sprintf("Unknown State (%d)", s)
 	}
 }
 
 // ReportJob defines a single reporting task attempt.
 type ReportJob struct {
-	ID            string
-	ReportNumber  int      // 1-based index for this report in the session
-	Status        string   // e.g., "pending", "processing", "success", "failed"
-	LogID         string   // From report response, if any (TODO: reporter needs to return this)
-	Error         string
-	StartTime     time.Time
-	EndTime       time.Time
+	ID           string
+	ReportNumber int    // 1-based index for this report in the session
+	Status       string // e.g., "pending", "processing", "success", "failed"
+	LogID        string // From report response, if any (TODO: reporter needs to return this)
+	Error        string
+	StartTime    time.Time
+	EndTime      time.Time
 	// Attempts field from previous might be redundant if Reporter handles retries for a single SendReport call
 }
 
 // Session manages a reporting session to a single target URL for a number of reports.
 type Session struct {
-	ID                string
-	State             SessionState
-	Reporter          *report.Reporter
+	ID       string
+	State    SessionState
+	Reporter *report.Reporter
 
-	TargetURL         string
-	NumReportsToSend  int
-	Jobs              []*ReportJob // Stores each of the N reports
+	TargetURL        string
+	NumReportsToSend int
+	Jobs             []*ReportJob // Stores each of the N reports
 
 	ReportsAttemptedCount int // Number of reports (0 to N-1) for which processing has started
-	SuccessfulReports   int
-	FailedReports       int
+	SuccessfulReports     int
+	FailedReports         int
 
-	StartTime         time.Time
-	EndTime           time.Time
-	ProxiesUsed       map[string]int // TODO: Populate this
+	StartTime   time.Time
+	EndTime     time.Time
+	ProxiesUsed map[string]int // TODO: Populate this
 
-	LogChannel        chan LogUpdate
-	controlChannel    chan string
+	LogChannel     chan LogUpdate
+	controlChannel chan string
 
-	wg                sync.WaitGroup
-	mu                sync.Mutex
+	wg sync.WaitGroup
+	mu sync.Mutex
 }
 
 // NewSession creates a new reporting session for a single target URL and a specified number of reports.
@@ -216,12 +226,14 @@ func (s *Session) runLoop() {
 					s.sendLog(LogLevelUpdateWarn, fmt.Sprintf("Invalid cmd '%s' while paused.", pausedCmd))
 					s.mu.Unlock()
 				}
-				s.mu.Lock() // Re-lock after breaking from inner pause loop
+				s.mu.Lock()            // Re-lock after breaking from inner pause loop
 				if s.State == Paused { // If controlChannel closed while paused
 					s.State = Aborted
 				}
 				s.mu.Unlock()
-				if s.GetStateValue() == Aborted { return } // Use GetStateValue for thread-safe read
+				if s.GetStateValue() == Aborted {
+					return
+				} // Use GetStateValue for thread-safe read
 				continue
 			case "abort":
 				s.State = Aborted
@@ -239,7 +251,7 @@ func (s *Session) runLoop() {
 		if s.State != Running {
 			s.mu.Unlock()
 			if currentState == Paused { // Use captured state for this check
-				 time.Sleep(100 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 			continue
 		}
@@ -249,9 +261,8 @@ func (s *Session) runLoop() {
 		currentJob.StartTime = time.Now()
 		s.sendLog(LogLevelUpdateInfo, fmt.Sprintf("Report %d/%d to %s -> Sending...", currentJob.ReportNumber, s.NumReportsToSend, s.TargetURL))
 
-		// SendReport's second argument (reportReason) is now effectively unused by the reporter.
-		// The session ID is passed for logging context within the reporter.
-		reportErr := s.Reporter.SendReport(s.TargetURL, "" /* reason no longer used */, s.ID)
+		// SendReport's second argument (reportReason) has been removed; session ID is now the second argument.
+		reportErr := s.Reporter.SendReport(s.TargetURL, s.ID)
 		currentJob.EndTime = time.Now()
 
 		s.mu.Lock()
@@ -319,7 +330,9 @@ func (s *Session) Abort() error {
 	case <-done:
 		s.mu.Lock()
 		s.State = Aborted
-		if s.EndTime.IsZero() { s.EndTime = time.Now() }
+		if s.EndTime.IsZero() {
+			s.EndTime = time.Now()
+		}
 		s.mu.Unlock()
 	case <-waitTimeout.C:
 		s.sendLog(LogLevelUpdateError, "Timeout waiting for session to abort.")
@@ -331,11 +344,10 @@ func (s *Session) Abort() error {
 
 // GetStateValue is a thread-safe way to get the current state.
 func (s *Session) GetStateValue() SessionState {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    return s.State
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.State
 }
-
 
 // GetSummary provides a string summary of the session.
 func (s *Session) GetSummary() string { // For TUI display, perhaps not for detailed logging
@@ -363,7 +375,7 @@ func (s *Session) GetStats() (currentState SessionState, targetURL string, numTo
 // EnsureLogChannelClosed is a helper that might be called by TUI when it's certain it's done with a session.
 // The primary close is in runLoop's defer.
 func (s *Session) EnsureLogChannelClosed() {
-    // This method is tricky because of potential race conditions on closing LogChannel.
-    // The runLoop's defer func is the most reliable place to close LogChannel.
-    // TUI should handle reads from a closed LogChannel gracefully.
+	// This method is tricky because of potential race conditions on closing LogChannel.
+	// The runLoop's defer func is the most reliable place to close LogChannel.
+	// TUI should handle reads from a closed LogChannel gracefully.
 }

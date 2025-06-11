@@ -1,7 +1,6 @@
 package report
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"io"
@@ -11,13 +10,10 @@ import (
 	"strings"
 	"time"
 
-	"strings"
-	"time"
-
-	"sentinelgo/ai" // Import AI package
-	"sentinelgo/config"
-	"sentinelgo/proxy"
-	"sentinelgo/utils"
+	"sentinelgo/sentinelgo/ai" // Import AI package
+	"sentinelgo/sentinelgo/config"
+	"sentinelgo/sentinelgo/proxy"
+	"sentinelgo/sentinelgo/utils"
 )
 
 // defaultUserAgents is a fallback list if not provided in config.
@@ -80,9 +76,8 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 			ExpectContinueTimeout: 5 * time.Second,
 		}
 		r.HTTPClient.Transport = transport
-        // The client's Timeout field can also be set here if preferred over context for the entire Do call
-        // r.HTTPClient.Timeout = 25 * time.Second
-
+		// The client's Timeout field can also be set here if preferred over context for the entire Do call
+		// r.HTTPClient.Timeout = 25 * time.Second
 
 		// Request Body is now nil for POST as Reason is removed.
 		// If a body is ever needed, it would be constructed here from other sources.
@@ -111,11 +106,10 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 				req.Header.Set(key, value)
 			}
 		}
-        // Content-Type for empty body POST is usually not set or handled by http client.
-        // If a specific Content-Type is required even for empty body, set it here.
-        // Example: req.Header.Set("Content-Type", "application/json") if API expects it.
-        // For now, let http client manage it or rely on server leniency for empty POST.
-
+		// Content-Type for empty body POST is usually not set or handled by http client.
+		// If a specific Content-Type is required even for empty body, set it here.
+		// Example: req.Header.Set("Content-Type", "application/json") if API expects it.
+		// For now, let http client manage it or rely on server leniency for empty POST.
 
 		// Add Custom Cookies
 		for _, cookie := range r.Config.CustomCookies {
@@ -124,14 +118,14 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 
 		// Log pre-request (headers logged here are as prepared, before client.Do might modify them e.g. for Host)
 		preReqLogEntry := utils.LogEntry{
-			SessionID:     sessionID,
-			Message:       fmt.Sprintf("Attempting report (attempt %d/%d)", attempt+1, r.Config.MaxRetries),
-			ReportURL:     targetURL,
-			Proxy:         selectedProxy.URL.String(),
-			UserAgent:     req.Header.Get("User-Agent"),
-			RequestMethod: req.Method,
+			SessionID:      sessionID,
+			Message:        fmt.Sprintf("Attempting report (attempt %d/%d)", attempt+1, r.Config.MaxRetries),
+			ReportURL:      targetURL,
+			Proxy:          selectedProxy.URL.String(),
+			UserAgent:      req.Header.Get("User-Agent"),
+			RequestMethod:  req.Method,
 			RequestHeaders: req.Header.Clone(), // Clone to log the state before Do
-			RequestBody:   reqBodyStr,       // Log the string version of the body
+			RequestBody:    reqBodyStr,         // Log the string version of the body
 		}
 		r.Logger.Info(preReqLogEntry)
 
@@ -141,14 +135,14 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 		latency := time.Since(startTime)
 
 		logEntry := utils.LogEntry{ // Prepare log entry, fill details as they become available
-			SessionID:       sessionID,
-			Message:         "Report attempt completed",
-			ReportURL:       targetURL,
-			Proxy:           selectedProxy.URL.String(),
-			UserAgent:       req.Header.Get("User-Agent"),
-			RequestMethod:   req.Method,
-			RequestHeaders:  preReqLogEntry.RequestHeaders, // Log headers as sent
-			RequestBody:     reqBodyStr,
+			SessionID:      sessionID,
+			Message:        "Report attempt completed",
+			ReportURL:      targetURL,
+			Proxy:          selectedProxy.URL.String(),
+			UserAgent:      req.Header.Get("User-Agent"),
+			RequestMethod:  req.Method,
+			RequestHeaders: preReqLogEntry.RequestHeaders, // Log headers as sent
+			RequestBody:    reqBodyStr,
 		}
 
 		if err != nil {
@@ -158,13 +152,12 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 			r.Logger.Error(logEntry)
 
 			// Update proxy status if error seems proxy-related (e.g., connection refused, timeout)
-            // This is a heuristic. More specific error checking is better.
-			if urlErr, ok := err.(*url.Error); ok && (urlErr.Timeout() || urlErr.Temporary()){
-                 r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
-            } else if strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "proxyconnect") {
+			// This is a heuristic. More specific error checking is better.
+			if urlErr, ok := err.(*url.Error); ok && (urlErr.Timeout() || urlErr.Temporary()) {
+				r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
+			} else if strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "proxyconnect") {
 				r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
 			}
-
 
 			if attempt < r.Config.MaxRetries-1 {
 				time.Sleep(time.Duration(rand.Intn(2)+1) * time.Second) // Simple backoff
@@ -194,7 +187,7 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 
 		logEntry.ResponseStatus = resp.StatusCode
 		logEntry.ResponseHeaders = resp.Header.Clone()
-		logEntry.ResponseBody = responseBodyStr // Be cautious with very large bodies in real scenarios
+		logEntry.ResponseBody = responseBodyStr        // Be cautious with very large bodies in real scenarios
 		logEntry.LogID = resp.Header.Get("X-Tt-Logid") // Common TikTok log ID header, adjust if different
 
 		// AI Analysis Hook
@@ -212,7 +205,6 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 			if analysisText == "" {
 				analysisText = "No textual content found in response to analyze."
 			}
-
 
 			aiResult, aiErr := r.AIAnalyzer.Analyze(sessionID, simulatedPostID, analysisText)
 			if aiErr != nil {
@@ -247,7 +239,6 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 			}
 		}
 
-
 		if resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			logEntry.Outcome = "accepted"
 			r.Logger.Info(logEntry) // Main log entry for the report outcome
@@ -264,12 +255,11 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 		logEntry.Outcome = "failed_status_code"
 		r.Logger.Error(logEntry) // Main log entry for the report outcome
 
-        // Consider specific status codes for proxy health
-        // e.g. 403, 407, 50x from proxy might indicate proxy issue
-        if resp.StatusCode == http.StatusProxyAuthRequired || resp.StatusCode == http.StatusForbidden {
-            r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
-        }
-
+		// Consider specific status codes for proxy health
+		// e.g. 403, 407, 50x from proxy might indicate proxy issue
+		if resp.StatusCode == http.StatusProxyAuthRequired || resp.StatusCode == http.StatusForbidden {
+			r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
+		}
 
 		if attempt < r.Config.MaxRetries-1 {
 			// Optional: check for specific status codes that shouldn't be retried

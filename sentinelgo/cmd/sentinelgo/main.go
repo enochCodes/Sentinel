@@ -4,16 +4,9 @@ import (
 	"fmt"
 	"os"
 
-	"sentinelgo/config"
-	"sentinelgo/tui" // New TUI package
-	"sentinelgo/utils" // Logger
-
-	"fmt"
-	"os"
-
-	"sentinelgo/config"
-	"sentinelgo/tui" // New TUI package
-	"sentinelgo/utils" // Logger
+	"sentinelgo/sentinelgo/config"
+	"sentinelgo/sentinelgo/tui"   // New TUI package
+	"sentinelgo/sentinelgo/utils" // Logger
 
 	tea "github.com/charmbracelet/bubbletea"
 )
@@ -34,17 +27,16 @@ func main() {
 		// Otherwise, handle critical config errors more gracefully or exit.
 		// For now, we assume LoadAppConfig provides a usable default config.
 	}
-    if appCfg == nil { // Ensure appCfg is not nil if LoadAppConfig can return nil on error
-        fmt.Fprintf(os.Stderr, "Critical error: AppConfig is nil after loading. Exiting.\n")
-        // Create a minimal default config if absolutely necessary to prevent nil pointer dereferences
-        appCfg = &config.AppConfig{
-            MaxRetries: 3, // Sensible default
-            RiskThreshold: 75.0, // Sensible default
-            DefaultHeaders: make(map[string]string),
-            APIKeys: make(map[string]string),
-        }
-    }
-
+	if appCfg == nil { // Ensure appCfg is not nil if LoadAppConfig can return nil on error
+		fmt.Fprintf(os.Stderr, "Critical error: AppConfig is nil after loading. Exiting.\n")
+		// Create a minimal default config if absolutely necessary to prevent nil pointer dereferences
+		appCfg = &config.AppConfig{
+			MaxRetries:     3,    // Sensible default
+			RiskThreshold:  75.0, // Sensible default
+			DefaultHeaders: make(map[string]string),
+			APIKeys:        make(map[string]string),
+		}
+	}
 
 	// 2. Initialize Logger
 	// For TUI, logging to stdout might interfere. A log file is better.
@@ -70,7 +62,6 @@ func main() {
 
 	appLogger.Info(utils.LogEntry{Message: "SentinelGo application starting..."})
 
-
 	// 3. Create Initial TUI Model
 	// Pass the loaded config and logger to the TUI model.
 	initialModel := tui.NewInitialModel(appCfg, appLogger)
@@ -85,11 +76,10 @@ func main() {
 		}
 	}()
 
-
 	if _, err := p.Run(); err != nil {
 		appLogger.Error(utils.LogEntry{Message: "TUI program exited with error", Error: err.Error()})
 		fmt.Fprintf(os.Stderr, "Error running TUI: %v\n", err)
 		os.Exit(1)
 	}
-    appLogger.Info(utils.LogEntry{Message: "SentinelGo application exited cleanly."})
+	appLogger.Info(utils.LogEntry{Message: "SentinelGo application exited cleanly."})
 }
