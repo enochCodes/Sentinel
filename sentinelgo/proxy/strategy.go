@@ -9,108 +9,166 @@ import (
 	"time"
 )
 
-// ErrNoHealthyProxies is returned when no healthy proxies are available.
+// Strategy constants define the available proxy selection strategies.
+const (
+	StrategyRoundRobin       = "round-robin"
+	StrategyRandom           = "random"
+	StrategyRegionPrioritized = "region-prioritized" // Note: Basic version, needs targetRegion.
+)
+
+// ErrNoHealthyProxies is returned by GetProxy when no healthy proxies are available
+// and the ProxyManager is configured to only use healthy proxies.
 var ErrNoHealthyProxies = errors.New("no healthy proxies available")
 
-// ProxyManager manages a pool of proxies and implements selection strategies.
+// ErrNoProxiesAvailable is returned by GetProxy when the proxy pool is empty.
+var ErrNoProxiesAvailable = errors.New("no proxies available in the manager")
+
+// ErrNoMatchingProxies is returned by GetProxy when no proxies match the given criteria
+// (e.g., region, health status) and no fallback is available.
+var ErrNoMatchingProxies = errors.New("no proxies match the specified criteria")
+
+// ProxyManager manages a pool of proxies and implements various selection strategies.
+// It allows for selecting proxies based on health, region, or rotation patterns.
+// The ProxyManager is designed to be thread-safe for getting and updating proxies.
 type ProxyManager struct {
-	Proxies      []*ProxyInfo
-	currentIndex int
-	Strategy     string
-	HealthyOnly  bool
-	mu           sync.Mutex // For thread-safe operations on currentIndex and Proxies list if needed
+	Proxies      []*ProxyInfo // The pool of all available proxies.
+	currentIndex int          // Used by the round-robin strategy.
+	Strategy     string       // The active proxy selection strategy (e.g., "round-robin", "random").
+	HealthyOnly  bool         // If true, strategies will only consider proxies marked "healthy".
+	mu           sync.Mutex   // Protects access to currentIndex and potentially the Proxies slice if it were modified dynamically post-creation.
+	rng          *rand.Rand   // Local random number generator for random strategy.
 }
 
-// NewProxyManager creates a new ProxyManager.
+// NewProxyManager creates and returns a new ProxyManager.
+//
+// Parameters:
+//   - proxies: A slice of `*ProxyInfo` structs representing the initial proxy pool.
+//   - strategy: A string constant (e.g., `StrategyRoundRobin`, `StrategyRandom`) specifying the
+//     proxy selection strategy to use. Defaults to "round-robin" if an unknown strategy is provided.
+//   - healthyOnly: A boolean indicating whether to only select from proxies marked as "healthy".
+//
+// The constructor initializes a local random number generator for the "random" strategy.
 func NewProxyManager(proxies []*ProxyInfo, strategy string, healthyOnly bool) *ProxyManager {
-	// Seed random number generator for random strategy
-	rand.New(rand.NewSource(time.Now().UnixNano())) //nolint:staticcheck // SA1019: rand.Seed has been deprecated for global random number generator, but okay for local.
+	// Initialize a new random source and generator for this manager instance.
+	// This avoids using the global rand which is not safe for concurrent use without locking.
+	source := rand.NewSource(time.Now().UnixNano())
+	localRng := rand.New(source)
 
 	return &ProxyManager{
 		Proxies:      proxies,
 		Strategy:     strings.ToLower(strategy),
 		HealthyOnly:  healthyOnly,
 		currentIndex: 0,
+		rng:          localRng,
 	}
 }
 
-// GetProxy selects a proxy based on the configured strategy.
-// For "region-prioritized", it expects one optional argument: targetRegion (string).
+// GetProxy selects and returns a proxy from the pool based on the configured strategy.
+//
+// Parameters:
+//   - targetRegion (optional): A variadic string. If the strategy is `StrategyRegionPrioritized`,
+//     the first string in `targetRegion` is used as the desired region.
+//
+// Returns:
+//   - A pointer to a `ProxyInfo` struct for the selected proxy.
+//   - An error if no suitable proxy is found (e.g., pool is empty, no healthy proxies available
+//     when `HealthyOnly` is true, or no proxies match region criteria). Common errors include
+//     `ErrNoProxiesAvailable`, `ErrNoHealthyProxies`, `ErrNoMatchingProxies`.
+//
+// The method is thread-safe.
 func (pm *ProxyManager) GetProxy(targetRegion ...string) (*ProxyInfo, error) {
-	pm.mu.Lock()
+	pm.mu.Lock() // Lock for read/write of currentIndex and for consistent view of Proxies if it were mutable.
 	defer pm.mu.Unlock()
 
 	if len(pm.Proxies) == 0 {
-		return nil, errors.New("no proxies available in the manager")
+		return nil, ErrNoProxiesAvailable
 	}
 
-	var availableProxies []*ProxyInfo
+	// Filter proxies by health status if HealthyOnly is enabled.
+	var candidateProxies []*ProxyInfo
 	if pm.HealthyOnly {
 		for _, p := range pm.Proxies {
-			if p.HealthStatus == "healthy" {
-				availableProxies = append(availableProxies, p)
+			if p != nil && p.HealthStatus == "healthy" { // Ensure p is not nil
+				candidateProxies = append(candidateProxies, p)
 			}
 		}
-		if len(availableProxies) == 0 {
+		if len(candidateProxies) == 0 {
 			return nil, ErrNoHealthyProxies
 		}
 	} else {
-		availableProxies = pm.Proxies
-	}
-    if len(availableProxies) == 0 {
-        return nil, errors.New("no proxies match criteria (e.g. all unhealthy or list empty)")
-    }
-
-
-	switch pm.Strategy {
-	case "random":
-		return availableProxies[rand.Intn(len(availableProxies))], nil
-	case "region-prioritized":
-		if len(targetRegion) == 0 || targetRegion[0] == "" {
-			// Fallback to round-robin or random if no region specified
-			// For simplicity, falling back to selecting any healthy proxy randomly
-			if len(availableProxies) == 0 { // Should be caught by HealthyOnly check earlier
-				return nil, ErrNoHealthyProxies
+		// Consider all non-nil proxies if not filtering by health.
+		for _, p := range pm.Proxies {
+			if p != nil {
+				candidateProxies = append(candidateProxies, p)
 			}
-			return availableProxies[rand.Intn(len(availableProxies))], nil
 		}
-		desiredRegion := targetRegion[0]
+	}
+
+	if len(candidateProxies) == 0 {
+		// This might happen if HealthyOnly is false but all entries in pm.Proxies were nil.
+		return nil, ErrNoMatchingProxies
+	}
+
+	// Apply selection strategy.
+	switch pm.Strategy {
+	case StrategyRandom:
+		return candidateProxies[pm.rng.Intn(len(candidateProxies))], nil
+
+	case StrategyRegionPrioritized:
+		if len(targetRegion) == 0 || targetRegion[0] == "" {
+			// Fallback: If no target region specified, select randomly from available healthy/all candidates.
+			return candidateProxies[pm.rng.Intn(len(candidateProxies))], nil
+		}
+		desiredRegion := strings.ToLower(targetRegion[0])
 		var regionMatchedProxies []*ProxyInfo
-		for _, p := range availableProxies {
+		for _, p := range candidateProxies {
 			if strings.EqualFold(p.Region, desiredRegion) {
 				regionMatchedProxies = append(regionMatchedProxies, p)
 			}
 		}
 		if len(regionMatchedProxies) > 0 {
-			return regionMatchedProxies[rand.Intn(len(regionMatchedProxies))], nil // Random from matched region
+			// Select randomly from proxies matching the target region.
+			return regionMatchedProxies[pm.rng.Intn(len(regionMatchedProxies))], nil
 		}
-		// Fallback: if no proxies in the target region, return any available proxy (randomly)
-		if len(availableProxies) > 0 {
-			return availableProxies[rand.Intn(len(availableProxies))], nil
+		// Fallback: If no proxies in the target region, select randomly from any other available candidate.
+		if len(candidateProxies) > 0 { // Already checked this earlier, but good for clarity
+			return candidateProxies[pm.rng.Intn(len(candidateProxies))], nil
 		}
-		return nil, fmt.Errorf("no proxies available for region %s, and no fallback proxies found", desiredRegion)
-	case "round-robin":
-		fallthrough // Default to round-robin
+		return nil, fmt.Errorf("%w: for region '%s'", ErrNoMatchingProxies, desiredRegion)
+
+
+	case StrategyRoundRobin:
+		fallthrough // Default to round-robin strategy.
 	default:
-		if len(availableProxies) == 0 { // Should be caught by HealthyOnly check earlier
-             return nil, ErrNoHealthyProxies
-        }
-		// Round-robin logic
-		proxy := availableProxies[pm.currentIndex%len(availableProxies)]
-		pm.currentIndex = (pm.currentIndex + 1) % len(availableProxies)
+		// pm.currentIndex is used on candidateProxies after filtering.
+		proxy := candidateProxies[pm.currentIndex%len(candidateProxies)]
+		pm.currentIndex = (pm.currentIndex + 1) % len(candidateProxies) // Cycle through candidate proxies.
 		return proxy, nil
 	}
 }
 
-// UpdateProxyStatus updates the health status and latency of a specific proxy in the manager's list.
-// This is useful if an external operation determines a proxy's status has changed.
+// UpdateProxyStatus updates the health status, latency, and last checked time
+// of a specific proxy in the manager's list.
+// The proxy is identified by its URL string.
+//
+// Parameters:
+//   - proxyURL: The string representation of the proxy's URL to find and update.
+//   - newStatus: The new health status string (e.g., "healthy", "unhealthy").
+//   - latency: The latency recorded for the operation that determined this new status.
+//
+// Returns:
+//   - `nil` if the proxy was found and updated.
+//   - An error if a proxy with the given URL string is not found in the manager.
+//
+// The method is thread-safe.
 func (pm *ProxyManager) UpdateProxyStatus(proxyURL string, newStatus string, latency time.Duration) error {
 	pm.mu.Lock()
 	defer pm.mu.Unlock()
 
 	found := false
 	for _, p := range pm.Proxies {
-		if p.URL.String() == proxyURL {
+		// Ensure p and p.URL are not nil before calling String()
+		if p != nil && p.URL != nil && p.URL.String() == proxyURL {
 			p.HealthStatus = newStatus
 			p.Latency = latency
 			p.LastChecked = time.Now()
@@ -119,17 +177,24 @@ func (pm *ProxyManager) UpdateProxyStatus(proxyURL string, newStatus string, lat
 		}
 	}
 	if !found {
-		return fmt.Errorf("proxy with URL %s not found in manager", proxyURL)
+		return fmt.Errorf("proxy with URL '%s' not found in manager for status update", proxyURL)
 	}
 	return nil
 }
 
-//GetAllProxies returns all proxies managed by the ProxyManager, useful for batch health checks after initialization.
+// GetAllProxies returns a new slice containing all proxies currently managed by the ProxyManager.
+// This is useful for operations like batch health checks that need to iterate over all proxies.
+// Returns a copy to prevent external modification of the manager's internal proxy slice.
+// The method is thread-safe.
 func (pm *ProxyManager) GetAllProxies() []*ProxyInfo {
-    pm.mu.Lock()
-    defer pm.mu.Unlock()
-    // Return a copy to prevent external modification of the slice
-    proxiesCopy := make([]*ProxyInfo, len(pm.Proxies))
-    copy(proxiesCopy, pm.Proxies)
-    return proxiesCopy
+	pm.mu.Lock()
+	defer pm.mu.Unlock()
+
+	// Return a copy of the slice to prevent external modifications.
+	if pm.Proxies == nil {
+		return nil // Or an empty slice: make([]*ProxyInfo, 0)
+	}
+	proxiesCopy := make([]*ProxyInfo, len(pm.Proxies))
+	copy(proxiesCopy, pm.Proxies)
+	return proxiesCopy
 }

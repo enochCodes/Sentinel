@@ -56,20 +56,6 @@ const (
 	LogPrefixTrace   = "[TRC]" // For very verbose debugging, if added
 )
 
-var (
-	// keyStyle for settings keys in the settings view.
-	keyStyle = lipgloss.NewStyle().
-		Foreground(PrimaryGreen).
-		Bold(true)
-
-	// valueStyle for settings values in the settings view.
-	valueStyle = lipgloss.NewStyle().
-		Foreground(BaseText)
-
-	// helpKeyStyle for keybinding hints in the footer and help text.
-	helpKeyStyle = HelpTextStyle.Copy().Bold(true)
-)
-
 
 // Color Palette (Inspired by military/terminal themes)
 // Using ANSI 256 color codes for wider compatibility.
