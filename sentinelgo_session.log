@@ -15,3 +15,9 @@
 {"timestamp":"2025-06-14T19:34:12.758630669Z","level":"INFO","message":"SentinelGo TUI exited cleanly."}
 {"timestamp":"2025-06-14T19:34:12.758742621Z","level":"INFO","message":"SentinelGo application shutting down. Closing log file."}
 {"timestamp":"2025-06-14T19:40:58.459394598Z","level":"INFO","message":"SentinelGo application TUI starting..."}
+{"timestamp":"2025-06-14T19:49:22.929622754Z","level":"INFO","message":"SentinelGo application TUI starting..."}
+{"timestamp":"2025-06-14T19:49:29.029637322Z","level":"INFO","message":"SentinelGo TUI exited cleanly."}
+{"timestamp":"2025-06-14T19:49:29.029770367Z","level":"INFO","message":"SentinelGo application shutting down. Closing log file."}
+{"timestamp":"2025-06-14T19:49:35.042661983Z","level":"INFO","message":"SentinelGo application TUI starting..."}
+{"timestamp":"2025-06-14T19:49:47.80599783Z","level":"INFO","message":"SentinelGo TUI exited cleanly."}
+{"timestamp":"2025-06-14T19:49:47.806199308Z","level":"INFO","message":"SentinelGo application shutting down. Closing log file."}
