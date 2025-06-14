@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"gopkg.in/yaml.v3"
 )
@@ -91,7 +92,6 @@ func LoadAppConfig(filePath string) (*AppConfig, error) {
 	if config.CustomCookies == nil {
 		config.CustomCookies = []http.Cookie{}
 	}
-
 
 	return config, nil
 }

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time" // For seeding random
 
-	"sentinelgo/utils"
+	"sentinelgo/sentinelgo/utils"
 )
 
 // AnalysisResult holds the outcome of an AI content analysis.
@@ -68,8 +68,8 @@ func NewDummyAnalyzer(logger *utils.Logger) *DummyAnalyzer {
 func (da *DummyAnalyzer) Analyze(sessionID string, postID string, contentText string) (*AnalysisResult, error) {
 	if da.Logger != nil {
 		da.Logger.Info(utils.LogEntry{
-			SessionID: sessionID,
-			Message:   fmt.Sprintf("Performing dummy AI analysis for post ID: %s", postID),
+			SessionID:      sessionID,
+			Message:        fmt.Sprintf("Performing dummy AI analysis for post ID: %s", postID),
 			AdditionalData: map[string]interface{}{"content_snippet": firstNChars(contentText, 70)}, // Log a slightly longer snippet
 		})
 	}
@@ -108,22 +108,25 @@ func (da *DummyAnalyzer) Analyze(sessionID string, postID string, contentText st
 	}
 
 	// Ensure score is capped at 100
-	if result.ThreatScore > 100.0 { result.ThreatScore = 100.0 }
-	if result.ThreatScore < 0.0 { result.ThreatScore = 0.0 }
-
+	if result.ThreatScore > 100.0 {
+		result.ThreatScore = 100.0
+	}
+	if result.ThreatScore < 0.0 {
+		result.ThreatScore = 0.0
+	}
 
 	if da.Logger != nil {
 		logData := map[string]interface{}{
-			"post_id": postID,
+			"post_id":      postID,
 			"threat_score": fmt.Sprintf("%.2f", result.ThreatScore), // Format float for logging
-			"category": result.Category,
+			"category":     result.Category,
 		}
 		if len(result.Details) > 0 {
 			logData["ai_details"] = result.Details
 		}
 		da.Logger.Info(utils.LogEntry{
-			SessionID: sessionID,
-			Message:   "Dummy AI Analysis complete.",
+			SessionID:      sessionID,
+			Message:        "Dummy AI Analysis complete.",
 			AdditionalData: logData,
 		})
 	}
@@ -134,7 +137,9 @@ func (da *DummyAnalyzer) Analyze(sessionID string, postID string, contentText st
 // firstNChars returns the first N characters of a string, adding "..." if truncated.
 // Useful for logging snippets of potentially long content.
 func firstNChars(s string, n int) string {
-	if n < 0 { n = 0 } // Ensure n is not negative
+	if n < 0 {
+		n = 0
+	} // Ensure n is not negative
 	runes := []rune(s) // Use runes to handle multi-byte characters correctly
 	if len(runes) <= n {
 		return s

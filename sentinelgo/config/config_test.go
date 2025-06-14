@@ -1,7 +1,6 @@
 package config
 
 import (
-	"net/http"
 	"os"
 	"path/filepath"
 	"testing"
@@ -108,9 +107,9 @@ func TestSessionState(t *testing.T) {
 	nestedStateFilePath := filepath.Join(nestedDir, "nested_state.json")
 
 	err = SaveSessionState(nestedStateFilePath, originalState)
-    require.NoError(t, err, "SaveSessionState should create nested directories")
-    _, err = os.Stat(nestedStateFilePath)
-    require.NoError(t, err, "Nested state file should exist")
+	require.NoError(t, err, "SaveSessionState should create nested directories")
+	_, err = os.Stat(nestedStateFilePath)
+	require.NoError(t, err, "Nested state file should exist")
 
 }
 
@@ -125,16 +124,15 @@ func TestLoadAppConfig_ActualFile(t *testing.T) {
 	// This requires sentinel.yaml to be in the same dir as config_test.go or CWD to be config/
 	// For `go test ./...` from sentinelgo root, path should be "config/sentinel.yaml"
 	if _, err := os.Stat("../config/sentinel.yaml"); os.IsNotExist(err) {
-		  // If running from sentinelgo/config, path is "sentinel.yaml"
-          if _, errRel := os.Stat("sentinel.yaml"); os.IsNotExist(errRel) {
-            t.Skip("Skipping test against actual sentinel.yaml: file not found at expected locations.")
-            return
-          }
-          actualConfigPath = "sentinel.yaml"
+		// If running from sentinelgo/config, path is "sentinel.yaml"
+		if _, errRel := os.Stat("sentinel.yaml"); os.IsNotExist(errRel) {
+			t.Skip("Skipping test against actual sentinel.yaml: file not found at expected locations.")
+			return
+		}
+		actualConfigPath = "sentinel.yaml"
 	} else {
-        actualConfigPath = "../config/sentinel.yaml"
-    }
-
+		actualConfigPath = "../config/sentinel.yaml"
+	}
 
 	cfg, err := LoadAppConfig(actualConfigPath)
 	require.NoError(t, err, "Loading actual sentinel.yaml failed")

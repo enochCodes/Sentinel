@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"os" // Required for os.Exit in Fatal, though currently commented out.
+	"strings"
 	"sync"
 	"time"
 )
@@ -46,30 +46,30 @@ var stringToLevel = map[string]LogLevel{
 // It's designed to be marshaled into JSON format for logging.
 // Fields are tagged with `json:"...,omitempty"` to exclude them from JSON output if they are zero-valued.
 type LogEntry struct {
-	Timestamp       string                 `json:"timestamp"`                      // ISO 8601 format (UTC) timestamp of the log event.
-	Level           string                 `json:"level"`                          // Severity level of the log (e.g., "INFO", "ERROR").
-	Message         string                 `json:"message"`                        // The main log message.
-	SessionID       string                 `json:"session_id,omitempty"`         // ID of the reporting session, if applicable.
-	ReportURL       string                 `json:"report_url,omitempty"`         // Target URL of the report, if applicable.
-	Proxy           string                 `json:"proxy,omitempty"`              // Proxy used for the request, if applicable.
-	UserAgent       string                 `json:"user_agent,omitempty"`         // User-Agent string used for the request.
-	RequestMethod   string                 `json:"request_method,omitempty"`     // HTTP request method (e.g., "POST", "GET").
-	RequestHeaders  http.Header            `json:"request_headers,omitempty"`    // HTTP headers sent with the request.
-	RequestBody     string                 `json:"request_body,omitempty"`       // Body of the HTTP request (may be summarized or omitted for large/sensitive data).
-	ResponseStatus  int                    `json:"response_status,omitempty"`    // HTTP status code received in the response.
-	ResponseHeaders http.Header            `json:"response_headers,omitempty"`   // HTTP headers received in the response.
-	ResponseBody    string                 `json:"response_body,omitempty"`      // Body of the HTTP response (may be summarized or omitted).
-	Outcome         string                 `json:"outcome,omitempty"`            // Result of an operation (e.g., "accepted", "failed", "retrying").
-	LogID           string                 `json:"log_id,omitempty"`             // Log ID from an external service (e.g., TikTok response header).
-	Error           string                 `json:"error,omitempty"`              // Error message if an error occurred.
-	AdditionalData  map[string]interface{} `json:"additional_data,omitempty"`    // A map for any other contextual data relevant to the log entry.
+	Timestamp       string                 `json:"timestamp"`                  // ISO 8601 format (UTC) timestamp of the log event.
+	Level           string                 `json:"level"`                      // Severity level of the log (e.g., "INFO", "ERROR").
+	Message         string                 `json:"message"`                    // The main log message.
+	SessionID       string                 `json:"session_id,omitempty"`       // ID of the reporting session, if applicable.
+	ReportURL       string                 `json:"report_url,omitempty"`       // Target URL of the report, if applicable.
+	Proxy           string                 `json:"proxy,omitempty"`            // Proxy used for the request, if applicable.
+	UserAgent       string                 `json:"user_agent,omitempty"`       // User-Agent string used for the request.
+	RequestMethod   string                 `json:"request_method,omitempty"`   // HTTP request method (e.g., "POST", "GET").
+	RequestHeaders  http.Header            `json:"request_headers,omitempty"`  // HTTP headers sent with the request.
+	RequestBody     string                 `json:"request_body,omitempty"`     // Body of the HTTP request (may be summarized or omitted for large/sensitive data).
+	ResponseStatus  int                    `json:"response_status,omitempty"`  // HTTP status code received in the response.
+	ResponseHeaders http.Header            `json:"response_headers,omitempty"` // HTTP headers received in the response.
+	ResponseBody    string                 `json:"response_body,omitempty"`    // Body of the HTTP response (may be summarized or omitted).
+	Outcome         string                 `json:"outcome,omitempty"`          // Result of an operation (e.g., "accepted", "failed", "retrying").
+	LogID           string                 `json:"log_id,omitempty"`           // Log ID from an external service (e.g., TikTok response header).
+	Error           string                 `json:"error,omitempty"`            // Error message if an error occurred.
+	AdditionalData  map[string]interface{} `json:"additional_data,omitempty"`  // A map for any other contextual data relevant to the log entry.
 }
 
 // Logger provides a structured JSON logger that writes log entries to an io.Writer.
 // It supports different log levels and ensures thread-safe write operations.
 type Logger struct {
-	writer   io.Writer // Destination for log output (e.g., os.Stdout, a file).
-	minLevel LogLevel  // Minimum log level to output; messages below this level are suppressed.
+	writer   io.Writer  // Destination for log output (e.g., os.Stdout, a file).
+	minLevel LogLevel   // Minimum log level to output; messages below this level are suppressed.
 	mu       sync.Mutex // Mutex to ensure thread-safe writes to the writer.
 }
 
@@ -152,7 +152,7 @@ func (l *Logger) Error(entry LogEntry) {
 // managed by the main application after logging, or this method should be uncommented carefully.
 func (l *Logger) Fatal(entry LogEntry) {
 	entry.Message = fmt.Sprintf("FATAL: %s", entry.Message) // Prepend "FATAL:" to the message for emphasis.
-	l.Log(LevelFatal, entry) // Log with LevelFatal, which will be written if minLevel allows.
+	l.Log(LevelFatal, entry)                                // Log with LevelFatal, which will be written if minLevel allows.
 	// If os.Exit is truly needed here (use with caution in library code):
 	// os.Exit(1)
 }
@@ -168,7 +168,8 @@ func (l *Logger) Fatal(entry LogEntry) {
 //   - err: An error object, if an error occurred. Its message will be stored. Can be nil.
 //
 // Returns:
-//   A LogEntry struct populated with the provided fields.
+//
+//	A LogEntry struct populated with the provided fields.
 func CreateLogEntry(message string, reportURL string, proxy string, outcome string, err error) LogEntry {
 	entry := LogEntry{
 		Message:   message,

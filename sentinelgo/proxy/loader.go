@@ -90,11 +90,11 @@ func parseProxyString(proxyStr string, defaultScheme string) (*url.URL, error) {
 
 // LoadProxies loads proxy information from various sources specified by `sourcePathOrURL`.
 // It supports loading from:
-// - CSV files (ending in ".csv"): Expects lines in `ip,port,user,pass[,region]` or `ip:port:user:pass[:region]` format.
-// - JSON files (ending in ".json"): Expects a JSON array of objects, each with a "proxy" string field
-//   (e.g., "http://user:pass@host:port") and an optional "region" field.
-// - HTTP(S) URLs (starting with "http://" or "https://"): Currently a placeholder; it logs a message
-//   that API proxy loading is not yet implemented and returns an empty list.
+//   - CSV files (ending in ".csv"): Expects lines in `ip,port,user,pass[,region]` or `ip:port:user:pass[:region]` format.
+//   - JSON files (ending in ".json"): Expects a JSON array of objects, each with a "proxy" string field
+//     (e.g., "http://user:pass@host:port") and an optional "region" field.
+//   - HTTP(S) URLs (starting with "http://" or "https://"): Currently a placeholder; it logs a message
+//     that API proxy loading is not yet implemented and returns an empty list.
 //
 // For file-based sources, it skips header lines (if "ip" or "host" is the first field in CSV)
 // and malformed or empty entries, logging these skips to standard output.
@@ -189,7 +189,9 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 				if len(parts) >= 4 { // user:pass present
 					userInfo = parts[2] + ":" + parts[3]
 					proxyStr = "http://" + userInfo + "@" + hostPort // Default scheme http
-					if len(parts) >= 5 { region = parts[4] }
+					if len(parts) >= 5 {
+						region = parts[4]
+					}
 				} else if len(parts) == 3 { // ip:port:region or ip:port:user (assume region if not looking like user@)
 					// This case is ambiguous. If parts[2] is purely alpha, could be user. If numeric or geo-code like, region.
 					// For simplicity, assume if 3 parts, parts[2] is region. For user only, use user@ip:port.
@@ -209,8 +211,15 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 				} else {
 					proxyStr = "http://" + host + ":" + port
 				}
-				if len(line) >= 5 { region = line[4] }
-				 else if len(line) == 3 && userInfo == "" { region = line[2] } // ip,port,region case
+				if len(line) >= 5 {
+					region = line[4]
+				} else if len(line) == 3 && userInfo == "" {
+					// This case is ambiguous. If line[2] is purely alpha, could be user. If numeric or geo-code like, region.
+					// For simplicity, assume if 3 fields, line[2] is region. For user only, use user@ip:port.
+					// A stricter format or more fields would be better.
+					// Assuming ip,port,region for this case.
+					region = line[2]
+				}
 			} else {
 				fmt.Printf("Skipping malformed comma-delimited CSV line #%d in '%s': %v\n", i+1, sourcePathOrURL, line)
 				continue

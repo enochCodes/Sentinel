@@ -10,3 +10,7 @@
 {"timestamp":"2025-06-12T05:00:43.012555193Z","level":"INFO","message":"SentinelGo application exited cleanly."}
 {"timestamp":"2025-06-12T05:30:53.047705634Z","level":"INFO","message":"SentinelGo application starting..."}
 {"timestamp":"2025-06-12T17:15:38.058129724Z","level":"INFO","message":"SentinelGo application starting..."}
+{"timestamp":"2025-06-14T19:33:17.474541469Z","level":"INFO","message":"SentinelGo application TUI starting..."}
+{"timestamp":"2025-06-14T19:33:54.381084995Z","level":"INFO","message":"SentinelGo application TUI starting..."}
+{"timestamp":"2025-06-14T19:34:12.758630669Z","level":"INFO","message":"SentinelGo TUI exited cleanly."}
+{"timestamp":"2025-06-14T19:34:12.758742621Z","level":"INFO","message":"SentinelGo application shutting down. Closing log file."}

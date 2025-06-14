@@ -4,9 +4,10 @@ import (
 	"fmt"
 	"sync"
 	"time"
+
 	"github.com/google/uuid"
 
-	"sentinelgo/report"
+	"sentinelgo/sentinelgo/report"
 )
 
 // LogLevelUpdate defines the severity level for LogUpdate messages sent to the TUI.
@@ -30,68 +31,77 @@ type SessionState int
 
 // Constants defining the specific states a Session can be in.
 const (
-	Idle SessionState = iota // Session created but not yet started.
-	Running                  // Session is actively processing reports.
-	Paused                   // Session is temporarily paused by user command.
-	Stopping                 // Session is in the process of stopping due to an abort command.
-	Stopped                  // Session was stopped before completing all reports (e.g., by abort, or if loop exited unexpectedly without completion).
-	Completed                // Session successfully processed all its reports.
-	Aborted                  // Session was explicitly aborted by user command, not all reports may have been processed.
-	Failed                   // Session encountered a critical internal error (e.g., panic in runLoop).
+	Idle      SessionState = iota // Session created but not yet started.
+	Running                       // Session is actively processing reports.
+	Paused                        // Session is temporarily paused by user command.
+	Stopping                      // Session is in the process of stopping due to an abort command.
+	Stopped                       // Session was stopped before completing all reports (e.g., by abort, or if loop exited unexpectedly without completion).
+	Completed                     // Session successfully processed all its reports.
+	Aborted                       // Session was explicitly aborted by user command, not all reports may have been processed.
+	Failed                        // Session encountered a critical internal error (e.g., panic in runLoop).
 )
 
 // String returns a human-readable string representation of the SessionState.
 func (s SessionState) String() string {
 	switch s {
-	case Idle: return "Idle"
-	case Running: return "Running"
-	case Paused: return "Paused"
-	case Stopping: return "Stopping"
-	case Stopped: return "Stopped"
-	case Completed: return "Completed"
-	case Aborted: return "Aborted"
-	case Failed: return "Failed (Internal Error)"
-	default: return fmt.Sprintf("Unknown State (%d)", s)
+	case Idle:
+		return "Idle"
+	case Running:
+		return "Running"
+	case Paused:
+		return "Paused"
+	case Stopping:
+		return "Stopping"
+	case Stopped:
+		return "Stopped"
+	case Completed:
+		return "Completed"
+	case Aborted:
+		return "Aborted"
+	case Failed:
+		return "Failed (Internal Error)"
+	default:
+		return fmt.Sprintf("Unknown State (%d)", s)
 	}
 }
 
 // ReportJob represents a single report attempt within a session.
 // Since a session now targets one URL for N reports, each of these N reports is a ReportJob.
 type ReportJob struct {
-	ID            string    // Unique identifier for this specific report job.
-	ReportNumber  int       // 1-based sequence number of this report within the session (e.g., 1 of N).
-	Status        string    // Current status of this job (e.g., "pending", "processing", "success", "failed").
-	LogID         string    // Log identifier received from the target platform's response (if any). TODO: reporter.SendReport needs to return this.
-	Error         string    // Error message if this specific report job failed.
-	StartTime     time.Time // Timestamp when processing for this job started.
-	EndTime       time.Time // Timestamp when processing for this job ended.
+	ID           string    // Unique identifier for this specific report job.
+	ReportNumber int       // 1-based sequence number of this report within the session (e.g., 1 of N).
+	Status       string    // Current status of this job (e.g., "pending", "processing", "success", "failed").
+	LogID        string    // Log identifier received from the target platform's response (if any). TODO: reporter.SendReport needs to return this.
+	Error        string    // Error message if this specific report job failed.
+	StartTime    time.Time // Timestamp when processing for this job started.
+	EndTime      time.Time // Timestamp when processing for this job ended.
 }
 
 // Session manages the overall process of sending a configured number of reports
 // to a single target URL. It handles state (running, paused, etc.), tracks progress,
 // and communicates updates via its LogChannel.
 type Session struct {
-	ID                string           // Unique identifier for the session.
-	State             SessionState     // Current operational state of the session.
-	Reporter          *report.Reporter // The reporter instance used to send individual reports.
+	ID       string           // Unique identifier for the session.
+	State    SessionState     // Current operational state of the session.
+	Reporter *report.Reporter // The reporter instance used to send individual reports.
 
-	TargetURL         string           // The URL targeted by this session.
-	NumReportsToSend  int              // Total number of reports to send in this session.
-	Jobs              []*ReportJob     // Slice holding each of the N report jobs.
+	TargetURL        string       // The URL targeted by this session.
+	NumReportsToSend int          // Total number of reports to send in this session.
+	Jobs             []*ReportJob // Slice holding each of the N report jobs.
 
-	ReportsAttemptedCount int        // How many reports (0 to N-1 index) have begun processing.
-	SuccessfulReports   int          // Count of successfully sent reports.
-	FailedReports       int          // Count of failed report attempts.
+	ReportsAttemptedCount int // How many reports (0 to N-1 index) have begun processing.
+	SuccessfulReports     int // Count of successfully sent reports.
+	FailedReports         int // Count of failed report attempts.
 
-	StartTime         time.Time        // Timestamp when the session was started.
-	EndTime           time.Time        // Timestamp when the session concluded (completed, aborted, or failed).
-	ProxiesUsed       map[string]int   // TODO: Track proxy usage statistics.
+	StartTime   time.Time      // Timestamp when the session was started.
+	EndTime     time.Time      // Timestamp when the session concluded (completed, aborted, or failed).
+	ProxiesUsed map[string]int // TODO: Track proxy usage statistics.
 
-	LogChannel        chan LogUpdate   // Channel for sending LogUpdate messages to listeners (e.g., TUI).
-	controlChannel    chan string      // Internal channel for control commands (pause, resume, abort).
+	LogChannel     chan LogUpdate // Channel for sending LogUpdate messages to listeners (e.g., TUI).
+	controlChannel chan string    // Internal channel for control commands (pause, resume, abort).
 
-	wg                sync.WaitGroup   // Used to wait for the main runLoop goroutine to finish.
-	mu                sync.Mutex       // Protects concurrent access to shared fields (State, counts, etc.).
+	wg sync.WaitGroup // Used to wait for the main runLoop goroutine to finish.
+	mu sync.Mutex     // Protects concurrent access to shared fields (State, counts, etc.).
 }
 
 // NewSession creates a new reporting session configured to send `numReportsToSend`
@@ -119,7 +129,7 @@ func NewSession(reporter *report.Reporter, targetURL string, numReportsToSend in
 		Jobs:             jobs,
 		ProxiesUsed:      make(map[string]int),
 		LogChannel:       make(chan LogUpdate, 100), // Buffered channel for TUI updates.
-		controlChannel:   make(chan string, 10),   // Buffered for control commands.
+		controlChannel:   make(chan string, 10),     // Buffered for control commands.
 	}
 }
 
@@ -197,7 +207,9 @@ func (s *Session) runLoop() {
 			s.sendLog(LogLevelUpdateWarn, "Session processing was aborted.")
 		}
 
-		if s.EndTime.IsZero() { s.EndTime = time.Now() } // Set end time if not already set (e.g., by Abort).
+		if s.EndTime.IsZero() {
+			s.EndTime = time.Now()
+		} // Set end time if not already set (e.g., by Abort).
 		s.mu.Unlock()
 		close(s.LogChannel) // Signal to listeners that no more logs will come from this session.
 	}()
@@ -248,7 +260,9 @@ func (s *Session) runLoop() {
 					s.State = Aborted // Treat as an abort.
 				}
 				s.mu.Unlock()
-				if s.GetStateValue() == Aborted { return } // Exit runLoop if aborted.
+				if s.GetStateValue() == Aborted {
+					return
+				} // Exit runLoop if aborted.
 				continue // Re-evaluate main loop condition.
 			case "abort":
 				s.State = Aborted // Set final state.
@@ -268,7 +282,7 @@ func (s *Session) runLoop() {
 		if s.State != Running {
 			s.mu.Unlock()
 			if currentState == Paused { // If it was paused, sleep briefly before re-checking.
-				 time.Sleep(100 * time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 			continue // Re-evaluate main loop condition (e.g. might be paused or aborted).
 		}
@@ -336,7 +350,7 @@ func (s *Session) Abort() error {
 	}
 
 	isAlreadyStopping := (s.State == Stopping || s.State == Aborted) // Aborted also implies stopping is done.
-	s.State = Stopping // Indicate intent to stop. runLoop will set final Aborted state.
+	s.State = Stopping                                               // Indicate intent to stop. runLoop will set final Aborted state.
 	s.mu.Unlock()
 
 	if !isAlreadyStopping {
@@ -357,7 +371,9 @@ func (s *Session) Abort() error {
 	case <-done: // runLoop completed.
 		s.mu.Lock()
 		s.State = Aborted // Ensure final state is Aborted.
-		if s.EndTime.IsZero() { s.EndTime = time.Now() }
+		if s.EndTime.IsZero() {
+			s.EndTime = time.Now()
+		}
 		s.mu.Unlock()
 	case <-waitTimeout.C: // Timeout waiting for runLoop.
 		s.sendLog(LogLevelUpdateError, "Timeout waiting for session to abort; runLoop may be stuck.")
@@ -369,9 +385,9 @@ func (s *Session) Abort() error {
 
 // GetStateValue returns the current operational state of the session (thread-safe).
 func (s *Session) GetStateValue() SessionState {
-    s.mu.Lock()
-    defer s.mu.Unlock()
-    return s.State
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	return s.State
 }
 
 // GetSummary provides a human-readable string summary of the session's status and progress.
@@ -404,10 +420,10 @@ func (s *Session) GetStats() (currentState SessionState, targetURL string, numTo
 // particularly if the session was never started. The primary mechanism for channel closure is the
 // defer function in runLoop.
 func (s *Session) EnsureLogChannelClosed() {
-    // The runLoop's defer close(s.LogChannel) is the primary mechanism.
-    // This function is more of a conceptual placeholder. In a robust system with multiple
-    // consumers or more complex lifecycle, channel closure needs careful design, often
-    // involving context cancellation or sync.Once for the close operation.
-    // For this application, TUI should gracefully handle reading from a closed channel
-    // when listenForSessionLogsCmd's <-s.LogChannel returns !ok.
+	// The runLoop's defer close(s.LogChannel) is the primary mechanism.
+	// This function is more of a conceptual placeholder. In a robust system with multiple
+	// consumers or more complex lifecycle, channel closure needs careful design, often
+	// involving context cancellation or sync.Once for the close operation.
+	// For this application, TUI should gracefully handle reading from a closed channel
+	// when listenForSessionLogsCmd's <-s.LogChannel returns !ok.
 }

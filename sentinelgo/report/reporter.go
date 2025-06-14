@@ -11,10 +11,10 @@ import (
 	"strings"
 	"time"
 
-	"sentinelgo/ai"
-	"sentinelgo/config"
-	"sentinelgo/proxy"
-	"sentinelgo/utils"
+	"sentinelgo/sentinelgo/ai"
+	"sentinelgo/sentinelgo/config"
+	"sentinelgo/sentinelgo/proxy"
+	"sentinelgo/sentinelgo/utils"
 )
 
 // defaultUserAgents provides a fallback list of User-Agent strings if not specified in AppConfig.
@@ -29,11 +29,11 @@ var defaultUserAgents = []string{
 // Reporter encapsulates the logic for sending a single report, including handling proxies,
 // retries, configuration, logging, and optional AI analysis.
 type Reporter struct {
-	Config     *config.AppConfig    // Application configuration, passed as a pointer.
-	ProxyMgr   *proxy.ProxyManager  // Manages proxy selection and status.
-	Logger     *utils.Logger        // Structured logger for recording events.
-	AIAnalyzer ai.ContentAnalyzer   // Optional content analyzer.
-	HTTPClient *http.Client         // HTTP client used for sending requests.
+	Config     *config.AppConfig   // Application configuration, passed as a pointer.
+	ProxyMgr   *proxy.ProxyManager // Manages proxy selection and status.
+	Logger     *utils.Logger       // Structured logger for recording events.
+	AIAnalyzer ai.ContentAnalyzer  // Optional content analyzer.
+	HTTPClient *http.Client        // HTTP client used for sending requests.
 }
 
 // NewReporter creates and returns a new Reporter instance.
@@ -85,7 +85,7 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 	for attempt := 0; attempt < r.Config.MaxRetries; attempt++ {
 		// Context for per-attempt timeout and potential cancellation.
 		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30) // Overall timeout for one attempt.
-		defer cancel() // Ensure cancel is called to free resources.
+		defer cancel()                                                           // Ensure cancel is called to free resources.
 
 		// Select a proxy for this attempt.
 		selectedProxy, err := r.ProxyMgr.GetProxy() // TODO: Future: pass targetRegion if strategy needs it.
@@ -138,14 +138,14 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 
 		// Log before sending the request.
 		preReqLogEntry := utils.LogEntry{
-			SessionID:     sessionID,
-			Message:       fmt.Sprintf("Attempting report (attempt %d/%d)", attempt+1, r.Config.MaxRetries),
-			ReportURL:     targetURL,
-			Proxy:         selectedProxy.URL.String(),
-			UserAgent:     req.Header.Get("User-Agent"),
-			RequestMethod: req.Method,
+			SessionID:      sessionID,
+			Message:        fmt.Sprintf("Attempting report (attempt %d/%d)", attempt+1, r.Config.MaxRetries),
+			ReportURL:      targetURL,
+			Proxy:          selectedProxy.URL.String(),
+			UserAgent:      req.Header.Get("User-Agent"),
+			RequestMethod:  req.Method,
 			RequestHeaders: req.Header.Clone(), // Clone to log headers as prepared.
-			RequestBody:   reqBodyStr,       // Empty as reqBody is nil.
+			RequestBody:    reqBodyStr,         // Empty as reqBody is nil.
 		}
 		r.Logger.Info(preReqLogEntry)
 
@@ -156,9 +156,9 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 
 		// Prepare a log entry for the outcome, to be filled as details emerge.
 		logEntry := utils.LogEntry{
-			SessionID:       sessionID, Message: "Report attempt completed", ReportURL: targetURL,
-			Proxy:           selectedProxy.URL.String(), UserAgent: req.Header.Get("User-Agent"),
-			RequestMethod:   req.Method, RequestHeaders:  preReqLogEntry.RequestHeaders, RequestBody: reqBodyStr,
+			SessionID: sessionID, Message: "Report attempt completed", ReportURL: targetURL,
+			Proxy: selectedProxy.URL.String(), UserAgent: req.Header.Get("User-Agent"),
+			RequestMethod: req.Method, RequestHeaders: preReqLogEntry.RequestHeaders, RequestBody: reqBodyStr,
 		}
 
 		if err != nil { // Network error or client-side error (e.g., timeout).
@@ -168,9 +168,9 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 			r.Logger.Error(logEntry)
 
 			// Heuristically update proxy status if the error seems proxy-related.
-			if urlErr, ok := err.(*url.Error); ok && (urlErr.Timeout() || urlErr.Temporary()){
-                 r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
-            } else if strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "proxyconnect") {
+			if urlErr, ok := err.(*url.Error); ok && (urlErr.Timeout() || urlErr.Temporary()) {
+				r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
+			} else if strings.Contains(err.Error(), "connect: connection refused") || strings.Contains(err.Error(), "proxyconnect") {
 				r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
 			}
 
@@ -195,35 +195,45 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 			logEntry.ResponseHeaders = resp.Header.Clone()
 			r.Logger.Error(logEntry)
 
-			if attempt < r.Config.MaxRetries-1 { continue }
+			if attempt < r.Config.MaxRetries-1 {
+				continue
+			}
 			return lastErr
 		}
 
 		// Populate remaining fields in the log entry.
 		logEntry.ResponseStatus = resp.StatusCode
 		logEntry.ResponseHeaders = resp.Header.Clone()
-		logEntry.ResponseBody = responseBodyStr // Caution: can be large.
+		logEntry.ResponseBody = responseBodyStr        // Caution: can be large.
 		logEntry.LogID = resp.Header.Get("X-Tt-Logid") // Example TikTok log ID header.
 
 		// AI Analysis Hook (if analyzer is configured and request was successful so far).
 		if r.AIAnalyzer != nil && resp.StatusCode >= 200 && resp.StatusCode < 300 {
 			simulatedPostID := "post123_" + targetURL // Simplified post ID.
 			analysisText := responseBodyStr
-			if len(analysisText) > 500 { analysisText = analysisText[:500] } // Truncate for analysis.
-			if analysisText == "" { analysisText = "No textual content found in response to analyze." }
+			if len(analysisText) > 500 {
+				analysisText = analysisText[:500]
+			} // Truncate for analysis.
+			if analysisText == "" {
+				analysisText = "No textual content found in response to analyze."
+			}
 
 			aiResult, aiErr := r.AIAnalyzer.Analyze(sessionID, simulatedPostID, analysisText)
 			if aiErr != nil {
-				r.Logger.Error(utils.LogEntry{ SessionID: sessionID, Message: "AI analysis failed", ReportURL: targetURL, Error: aiErr.Error(), AdditionalData: map[string]interface{}{"post_id": simulatedPostID} })
+				r.Logger.Error(utils.LogEntry{SessionID: sessionID, Message: "AI analysis failed", ReportURL: targetURL, Error: aiErr.Error(), AdditionalData: map[string]interface{}{"post_id": simulatedPostID}})
 			} else if aiResult != nil {
-				if logEntry.AdditionalData == nil { logEntry.AdditionalData = make(map[string]interface{}) }
+				if logEntry.AdditionalData == nil {
+					logEntry.AdditionalData = make(map[string]interface{})
+				}
 				logEntry.AdditionalData["AIThreatScore"] = aiResult.ThreatScore
 				logEntry.AdditionalData["AICategory"] = aiResult.Category
-				if len(aiResult.Details) > 0 { logEntry.AdditionalData["AIDetails"] = aiResult.Details }
+				if len(aiResult.Details) > 0 {
+					logEntry.AdditionalData["AIDetails"] = aiResult.Details
+				}
 
-				r.Logger.Info(utils.LogEntry{ SessionID: sessionID, Message: "AI Analysis Result", ReportURL: targetURL, AdditionalData: map[string]interface{}{ "post_id": simulatedPostID, "threat_score": aiResult.ThreatScore, "category": aiResult.Category } })
+				r.Logger.Info(utils.LogEntry{SessionID: sessionID, Message: "AI Analysis Result", ReportURL: targetURL, AdditionalData: map[string]interface{}{"post_id": simulatedPostID, "threat_score": aiResult.ThreatScore, "category": aiResult.Category}})
 				if aiResult.ThreatScore > r.Config.RiskThreshold {
-					r.Logger.Warn(utils.LogEntry{ SessionID: sessionID, Message: "AI detected high risk content!", ReportURL: targetURL, AdditionalData: map[string]interface{}{ "post_id": simulatedPostID, "threat_score": aiResult.ThreatScore, "category": aiResult.Category, "threshold": r.Config.RiskThreshold }, Outcome: "high_risk_detected" })
+					r.Logger.Warn(utils.LogEntry{SessionID: sessionID, Message: "AI detected high risk content!", ReportURL: targetURL, AdditionalData: map[string]interface{}{"post_id": simulatedPostID, "threat_score": aiResult.ThreatScore, "category": aiResult.Category, "threshold": r.Config.RiskThreshold}, Outcome: "high_risk_detected"})
 				}
 			}
 		}
@@ -237,15 +247,19 @@ func (r *Reporter) SendReport(targetURL string, sessionID string) error {
 
 		// Non-2xx status code is considered a failure for this attempt.
 		lastErr = fmt.Errorf("attempt %d/%d to %s: report failed with status %d", attempt+1, r.Config.MaxRetries, targetURL, resp.StatusCode)
-		if logEntry.Error == "" { logEntry.Error = fmt.Sprintf("status code %d", resp.StatusCode) }
+		if logEntry.Error == "" {
+			logEntry.Error = fmt.Sprintf("status code %d", resp.StatusCode)
+		}
 		logEntry.Outcome = "failed_status_code"
 		r.Logger.Error(logEntry)
 
-        if resp.StatusCode == http.StatusProxyAuthRequired || resp.StatusCode == http.StatusForbidden {
-            r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
-        }
+		if resp.StatusCode == http.StatusProxyAuthRequired || resp.StatusCode == http.StatusForbidden {
+			r.ProxyMgr.UpdateProxyStatus(selectedProxy.URL.String(), "unhealthy", latency)
+		}
 
-		if attempt < r.Config.MaxRetries-1 { continue } // Go to next retry if not last attempt.
+		if attempt < r.Config.MaxRetries-1 {
+			continue
+		} // Go to next retry if not last attempt.
 		return lastErr // All retries failed for non-2xx status.
 	}
 	return lastErr // Should only be reached if MaxRetries is 0 or less (loop doesn't run).
