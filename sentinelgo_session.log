@@ -14,3 +14,4 @@
 {"timestamp":"2025-06-14T19:33:54.381084995Z","level":"INFO","message":"SentinelGo application TUI starting..."}
 {"timestamp":"2025-06-14T19:34:12.758630669Z","level":"INFO","message":"SentinelGo TUI exited cleanly."}
 {"timestamp":"2025-06-14T19:34:12.758742621Z","level":"INFO","message":"SentinelGo application shutting down. Closing log file."}
+{"timestamp":"2025-06-14T19:40:58.459394598Z","level":"INFO","message":"SentinelGo application TUI starting..."}

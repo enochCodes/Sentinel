@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/url"
 	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -182,6 +183,11 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 					fmt.Printf("Skipping malformed colon-delimited CSV line #%d in '%s': %v\n", i+1, sourcePathOrURL, line)
 					continue
 				}
+				// Check if port is numeric
+				if _, err := strconv.Atoi(parts[1]); err != nil {
+					fmt.Printf("Skipping proxy with non-numeric port in colon-delimited CSV line #%d in '%s': %v\n", i+1, sourcePathOrURL, line)
+					continue
+				}
 
 				hostPort := parts[0] + ":" + parts[1]
 				userInfo := ""
@@ -204,6 +210,11 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 				}
 			} else if len(line) >= 2 { // Format: ip,port[,user,pass[,region]]
 				host, port := line[0], line[1]
+				// Check if port is numeric
+				if _, err := strconv.Atoi(port); err != nil {
+					fmt.Printf("Skipping proxy with non-numeric port in comma-delimited CSV line #%d in '%s': %v\n", i+1, sourcePathOrURL, line)
+					continue
+				}
 				userInfo := ""
 				if len(line) >= 4 && line[2] != "" && line[3] != "" { // user,pass present
 					userInfo = line[2] + ":" + line[3]
