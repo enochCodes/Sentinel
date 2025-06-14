@@ -47,13 +47,42 @@ func parseProxyString(proxyStr string, defaultScheme string) (*url.URL, error) {
 			parsedURL.User = url.UserPassword(username, password)
 			parsedURL.Host = hostStr
 		} else {
-            return nil, fmt.Errorf("malformed user info in proxy string: %s", proxyStr)
-        }
+			return nil, fmt.Errorf("malformed user info in proxy string: %s", proxyStr)
+		}
 	}
-
 
 	return parsedURL, nil
 }
+
+// // CheckProxyHealth tries to make a request through the proxy and updates its health status.
+// func CheckProxyHealth(proxy *ProxyInfo, timeout time.Duration) {
+// 	transport := &http.Transport{
+// 		Proxy: http.ProxyURL(proxy.URL),
+// 	}
+// 	client := &http.Client{
+// 		Transport: transport,
+// 		Timeout:   timeout,
+// 	}
+
+// 	start := time.Now()
+// 	resp, err := client.Get("https://www.google.com/generate_204")
+// 	latency := time.Since(start)
+
+// 	proxy.LastChecked = time.Now()
+// 	proxy.Latency = latency
+
+// 	if err != nil {
+// 		proxy.HealthStatus = "unhealthy"
+// 		return
+// 	}
+// 	defer resp.Body.Close()
+
+// 	if resp.StatusCode == 204 {
+// 		proxy.HealthStatus = "healthy"
+// 	} else {
+// 		proxy.HealthStatus = "unhealthy"
+// 	}
+// }
 
 // LoadProxies loads proxy information from various sources (CSV, JSON files, or API endpoints).
 func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
@@ -134,17 +163,17 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 				}
 				ipPort := strings.Join(parts[0:2], ":")
 				if len(parts) >= 4 { // user:pass present
-                    userInfo := strings.Join(parts[2:4], ":")
-                    proxyStr = fmt.Sprintf("http://%s@%s", userInfo, ipPort)
+					userInfo := strings.Join(parts[2:4], ":")
+					proxyStr = fmt.Sprintf("http://%s@%s", userInfo, ipPort)
 					if len(parts) >= 5 {
 						region = parts[4]
 					}
-                } else { // No user:pass
-                    proxyStr = fmt.Sprintf("http://%s", ipPort)
+				} else { // No user:pass
+					proxyStr = fmt.Sprintf("http://%s", ipPort)
 					if len(parts) >= 3 {
 						region = parts[2] // if region is 3rd element after ip:port
 					}
-                }
+				}
 
 			} else if len(line) >= 4 { // ip,port,user,pass format
 				ip, port, user, pass := line[0], line[1], line[2], line[3]
@@ -155,7 +184,7 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 			} else if len(line) >= 2 { // ip,port format (no auth)
 				ip, port := line[0], line[1]
 				proxyStr = fmt.Sprintf("http://%s:%s", ip, port)
-				if len(line) >=3 {
+				if len(line) >= 3 {
 					region = line[2]
 				}
 			} else {
@@ -179,6 +208,11 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 		}
 	} else {
 		return nil, fmt.Errorf("unsupported proxy source format: %s (must be .csv, .json, or http(s) URL)", sourcePathOrURL)
+	}
+
+	// Check health for each proxy after loading
+	for _, p := range proxies {
+		CheckProxyHealth(p, 5*time.Second) // 5 second timeout, adjust as needed
 	}
 
 	return proxies, nil

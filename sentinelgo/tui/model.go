@@ -82,6 +82,8 @@ type Model struct {
 
 // NewInitialModel creates the initial TUI model.
 func NewInitialModel(cfg *config.AppConfig, logger *utils.Logger) Model {
+	// logo
+	// sleep 3 sec
 	m := Model{
 		activeTab:        TargetInputTab,
 		tabsDisplayNames: tabNames,
