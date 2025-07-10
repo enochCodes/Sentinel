@@ -169,6 +169,10 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 			if i == 0 && (strings.ToLower(line[0]) == "ip" || strings.ToLower(line[0]) == "host" || strings.ToLower(line[0]) == "proxy") {
 				continue
 			}
+			// Skip comment lines (starting with #)
+			if strings.HasPrefix(strings.TrimSpace(line[0]), "#") {
+				continue
+			}
 			if len(line) == 1 && line[0] == "" { // Skip lines with only a single empty field
 				continue
 			}
@@ -252,11 +256,6 @@ func LoadProxies(sourcePathOrURL string) ([]*ProxyInfo, error) {
 		}
 	} else {
 		return nil, fmt.Errorf("unsupported proxy source format for '%s' (must end with .csv, .json, or be an http(s) URL)", sourcePathOrURL)
-	}
-
-	// Check health for each proxy after loading
-	for _, p := range proxies {
-		CheckProxyHealth(p, 5*time.Second) // 5 second timeout, adjust as needed
 	}
 
 	return proxies, nil

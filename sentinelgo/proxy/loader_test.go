@@ -194,3 +194,55 @@ func TestParseProxyString(t *testing.T) {
 		})
 	}
 }
+
+func TestLoadProxies_EmptyCSV(t *testing.T) {
+	csvPath := createTempCSV(t, "")
+	defer os.Remove(csvPath)
+	proxies, err := LoadProxies(csvPath)
+	require.NoError(t, err)
+	assert.Empty(t, proxies, "Empty CSV should return empty slice")
+}
+
+func TestLoadProxies_CommentsOnlyCSV(t *testing.T) {
+	csvContent := `# This is a comment
+# Another comment line
+`
+	csvPath := createTempCSV(t, csvContent)
+	defer os.Remove(csvPath)
+	proxies, err := LoadProxies(csvPath)
+	require.NoError(t, err)
+	assert.Empty(t, proxies, "CSV with only comments should return empty slice")
+}
+
+func TestLoadProxies_EmptyJSON(t *testing.T) {
+	jsonPath := createTempJSON(t, []interface{}{})
+	defer os.Remove(jsonPath)
+	proxies, err := LoadProxies(jsonPath)
+	require.NoError(t, err)
+	assert.Empty(t, proxies, "Empty JSON array should return empty slice")
+}
+
+func TestLoadProxies_JSONMissingProxyField(t *testing.T) {
+	jsonData := []map[string]string{
+		{"region": "US"},
+		{"proxy": "", "region": "EU"},
+	}
+	jsonPath := createTempJSON(t, jsonData)
+	defer os.Remove(jsonPath)
+	proxies, err := LoadProxies(jsonPath)
+	require.NoError(t, err)
+	assert.Empty(t, proxies, "JSON with missing/empty proxy field should return empty slice")
+}
+
+func TestLoadProxies_CSVAmbiguousThreeFields(t *testing.T) {
+	csvContent := `ip,port,region
+proxyhost,1234,ZZ
+`
+	csvPath := createTempCSV(t, csvContent)
+	defer os.Remove(csvPath)
+	proxies, err := LoadProxies(csvPath)
+	require.NoError(t, err)
+	require.Len(t, proxies, 1)
+	assert.Equal(t, "ZZ", proxies[0].Region)
+	assert.Equal(t, "http://proxyhost:1234", proxies[0].URL.String())
+}
